@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="ru">
+<html lang="ru" id="htmlRoot">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -165,15 +165,17 @@ display:block; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em
 color:var(--text-dim); margin-bottom:6px; font-weight:500;
 }
 
-input[type=“text”],
-input[type=“date”],
+input[type=”text”],
+input[type=”date”],
 select {
 width:100%;
 padding:10px 14px;
 background-color: var(--surface2) !important;
-border:1px solid var(--border);
+background: var(--surface2) !important;
+border:1px solid var(--border) !important;
 border-radius:var(--radius-sm);
 color: var(--text) !important;
+-webkit-text-fill-color: var(--text);
 font-family:inherit;
 font-size:16px;
 outline:none;
@@ -181,6 +183,17 @@ transition:border-color 0.2s;
 -webkit-appearance:none;
 -moz-appearance:none;
 appearance:none;
+}
+input[type=”text”]::placeholder,
+input[type=”date”]::placeholder {
+color: var(--text-dim);
+-webkit-text-fill-color: var(--text-dim);
+opacity:1;
+}
+input[type=”text”]::-webkit-input-placeholder {
+color: var(--text-dim);
+-webkit-text-fill-color: var(--text-dim);
+opacity:1;
 }
 input[type=“text”]:focus,
 input[type=“date”]:focus,
@@ -256,6 +269,22 @@ margin-bottom:18px; padding:10px 14px; background:var(--surface2); border-radius
 }
 .notif-setting select { width:auto; padding:6px 10px; font-size:16px; }
 
+/* LANG TOGGLE */
+.lang-toggle {
+display:flex; gap:0; justify-content:center; margin-top:12px;
+}
+.lang-toggle button {
+padding:4px 12px; font-family:inherit; font-size:0.78rem; font-weight:600;
+letter-spacing:0.05em; border:1px solid var(--border); background:var(--surface);
+color:var(--text-dim); cursor:pointer; transition:all 0.2s;
+-webkit-appearance:none;
+}
+.lang-toggle button:first-child { border-radius:20px 0 0 20px; }
+.lang-toggle button:last-child { border-radius:0 20px 20px 0; }
+.lang-toggle button.active {
+background:var(--accent); color:var(--bg); border-color:var(--accent);
+}
+
 /* MOBILE */
 @media (max-width:500px) {
 header h1 { font-size:2rem; }
@@ -272,7 +301,11 @@ header h1 { font-size:2rem; }
 <div class="container">
   <header>
     <h1>Trippa</h1>
-    <p>Планируй &middot; Делись &middot; Путешествуй</p>
+    <p id="tagline">Планируй &middot; Делись &middot; Путешествуй</p>
+    <div class="lang-toggle" id="langToggle">
+      <button data-lang="ru" class="active">RU</button>
+      <button data-lang="en">EN</button>
+    </div>
   </header>
 
   <div class="notif-banner" id="notifBanner">
@@ -283,12 +316,12 @@ header h1 { font-size:2rem; }
 <button class="add-btn" id="addBtn">+ Добавить поездку</button>
 
   <div id="upcomingSection">
-    <div class="section-title">Предстоящие</div>
+    <div class="section-title" id="upcomingTitle">Предстоящие</div>
     <div id="upcomingList"></div>
   </div>
 
   <div class="archive-section" id="archiveSection" style="display:none">
-    <div class="section-title">Архив</div>
+    <div class="section-title" id="archiveTitle">Архив</div>
     <div id="archiveList"></div>
   </div>
 </div>
@@ -298,35 +331,35 @@ header h1 { font-size:2rem; }
     <h2 id="modalTitle">Новая поездка</h2>
 
 <div class="form-group">
-  <label>Тип</label>
+  <label id="labelType">Тип</label>
   <select id="tripType">
-    <option value="vacation">Отпуск</option>
-    <option value="business">Командировка</option>
-    <option value="weekend">Выходные</option>
-    <option value="trip">Поездка</option>
-    <option value="other">Другое</option>
+    <option value="vacation" id="optVacation">Отпуск</option>
+    <option value="business" id="optBusiness">Командировка</option>
+    <option value="weekend" id="optWeekend">Выходные</option>
+    <option value="trip" id="optTrip">Поездка</option>
+    <option value="other" id="optOther">Другое</option>
   </select>
 </div>
 
 <div class="form-group">
-  <label>Название</label>
+  <label id="labelName">Название</label>
   <input type="text" id="tripName" placeholder="Например: Отпуск в Европе">
 </div>
 
 <div class="form-group">
-  <label>Города и даты</label>
+  <label id="labelCities">Города и даты</label>
   <div class="cities-container" id="citiesContainer"></div>
   <button class="add-city-btn" id="addCityBtn">+ Добавить город</button>
 </div>
 
 <div class="notif-setting">
-  <span>Напомнить за</span>
+  <span id="labelRemind">Напомнить за</span>
   <select id="notifDays">
-    <option value="0">в день отъезда</option>
-    <option value="1" selected>1 день</option>
-    <option value="3">3 дня</option>
-    <option value="7">7 дней</option>
-    <option value="14">14 дней</option>
+    <option value="0" id="optDay0">в день отъезда</option>
+    <option value="1" selected id="optDay1">1 день</option>
+    <option value="3" id="optDay3">3 дня</option>
+    <option value="7" id="optDay7">7 дней</option>
+    <option value="14" id="optDay14">14 дней</option>
   </select>
 </div>
 
@@ -348,41 +381,188 @@ header h1 { font-size:2rem; }
   function storeGet(k) { if (!storageOk) return null; try { return localStorage.getItem(k); } catch(e) { return null; } }
   function storeSet(k, v) { if (!storageOk) return; try { localStorage.setItem(k, v); } catch(e) {} }
 
+  // ====== i18n ======
+  var I18N = {
+    ru: {
+      tagline: "Планируй \u00b7 Делись \u00b7 Путешествуй",
+      addTrip: "+ Добавить поездку",
+      upcoming: "Предстоящие",
+      archive: "Архив",
+      newTrip: "Новая поездка",
+      editTrip: "Редактировать",
+      labelType: "Тип",
+      labelName: "Название",
+      labelCities: "Города и даты",
+      labelRemind: "Напомнить за",
+      addCity: "+ Добавить город",
+      cancel: "Отмена",
+      save: "Сохранить",
+      cityPlaceholder: "Город",
+      namePlaceholder: "Например: Отпуск в Европе",
+      vacation: "Отпуск",
+      business: "Командировка",
+      weekend: "Выходные",
+      trip: "Поездка",
+      other: "Другое",
+      day0: "в день отъезда",
+      day1: "1 день",
+      day3: "3 дня",
+      day7: "7 дней",
+      day14: "14 дней",
+      notifUnsupported: "Уведомления не поддерживаются",
+      notifGranted: "Уведомления включены",
+      notifDenied: "Уведомления заблокированы",
+      notifAsk: "Нажмите, чтобы включить уведомления",
+      noTrips: "Нет предстоящих поездок",
+      addFirst: "Добавьте первую!",
+      traveling: "Сейчас в поездке!",
+      departToday: "Отъезд сегодня!",
+      inPrefix: "через",
+      deleteConfirm: "Удалить поездку?",
+      alertNoCity: "Добавьте хотя бы один город с датами",
+      alertFillAll: "Заполните все поля для каждого города",
+      notifToday: "Сегодня",
+      notifIn: "Через"
+    },
+    en: {
+      tagline: "Plan \u00b7 Share \u00b7 Travel",
+      addTrip: "+ Add trip",
+      upcoming: "Upcoming",
+      archive: "Archive",
+      newTrip: "New trip",
+      editTrip: "Edit",
+      labelType: "Type",
+      labelName: "Name",
+      labelCities: "Cities and dates",
+      labelRemind: "Remind",
+      addCity: "+ Add city",
+      cancel: "Cancel",
+      save: "Save",
+      cityPlaceholder: "City",
+      namePlaceholder: "E.g.: Vacation in Europe",
+      vacation: "Vacation",
+      business: "Business",
+      weekend: "Weekend",
+      trip: "Trip",
+      other: "Other",
+      day0: "on departure day",
+      day1: "1 day",
+      day3: "3 days",
+      day7: "7 days",
+      day14: "14 days",
+      notifUnsupported: "Notifications not supported",
+      notifGranted: "Notifications enabled",
+      notifDenied: "Notifications blocked",
+      notifAsk: "Tap to enable notifications",
+      noTrips: "No upcoming trips",
+      addFirst: "Add your first!",
+      traveling: "Currently traveling!",
+      departToday: "Departing today!",
+      inPrefix: "in",
+      deleteConfirm: "Delete trip?",
+      alertNoCity: "Add at least one city with dates",
+      alertFillAll: "Fill in all fields for each city",
+      notifToday: "Today",
+      notifIn: "In"
+    }
+  };
+
+  var CITIES_DB = {
+    ru: [
+      "Москва","Санкт-Петербург","Казань","Сочи","Калининград","Нижний Новгород",
+      "Екатеринбург","Новосибирск","Владивосток","Красноярск",
+      "Париж","Лондон","Берлин","Рим","Мадрид","Барселона","Амстердам","Прага","Вена","Будапешт",
+      "Варшава","Краков","Стамбул","Лиссабон","Дублин","Цюрих","Женева","Милан","Венеция","Флоренция",
+      "Мюнхен","Копенгаген","Осло","Стокгольм","Хельсинки","Афины","Бангкок","Токио","Сеул","Пекин",
+      "Шанхай","Сингапур","Дубай","Нью-Йорк","Лос-Анджелес","Сан-Франциско","Торонто","Сидней",
+      "Тбилиси","Батуми","Ереван","Баку","Ташкент","Самарканд","Бишкек","Алматы","Астана","Минск",
+      "Белград","Загреб","Братислава","Таллин","Рига","Вильнюс","Бухарест","София",
+      "Бали","Пхукет","Анталья","Каир","Марракеш","Кейптаун","Буэнос-Айрес","Мехико"
+    ],
+    en: [
+      "Moscow","Saint Petersburg","Kazan","Sochi","Kaliningrad","Nizhny Novgorod",
+      "Yekaterinburg","Novosibirsk","Vladivostok","Krasnoyarsk",
+      "Paris","London","Berlin","Rome","Madrid","Barcelona","Amsterdam","Prague","Vienna","Budapest",
+      "Warsaw","Krakow","Istanbul","Lisbon","Dublin","Zurich","Geneva","Milan","Venice","Florence",
+      "Munich","Copenhagen","Oslo","Stockholm","Helsinki","Athens","Bangkok","Tokyo","Seoul","Beijing",
+      "Shanghai","Singapore","Dubai","New York","Los Angeles","San Francisco","Toronto","Sydney",
+      "Tbilisi","Batumi","Yerevan","Baku","Tashkent","Samarkand","Bishkek","Almaty","Astana","Minsk",
+      "Belgrade","Zagreb","Bratislava","Tallinn","Riga","Vilnius","Bucharest","Sofia",
+      "Bali","Phuket","Antalya","Cairo","Marrakech","Cape Town","Buenos Aires","Mexico City"
+    ]
+  };
+
+  var lang = storeGet("trippa_lang") || "ru";
+
+  function t(key) { return (I18N[lang] && I18N[lang][key]) || (I18N.ru[key]) || key; }
+
+  function setLang(newLang) {
+    lang = newLang;
+    storeSet("trippa_lang", lang);
+    document.getElementById("htmlRoot").setAttribute("lang", lang);
+    applyLang();
+    updateBanner();
+    render();
+  }
+
+  function applyLang() {
+    // Toggle buttons
+    var btns = document.querySelectorAll("#langToggle button");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("active", btns[i].getAttribute("data-lang") === lang);
+    }
+    // Static elements
+    document.getElementById("tagline").innerHTML = t("tagline");
+    document.getElementById("addBtn").textContent = t("addTrip");
+    document.getElementById("upcomingTitle").textContent = t("upcoming");
+    document.getElementById("archiveTitle").textContent = t("archive");
+    document.getElementById("labelType").textContent = t("labelType");
+    document.getElementById("labelName").textContent = t("labelName");
+    document.getElementById("labelCities").textContent = t("labelCities");
+    document.getElementById("labelRemind").textContent = t("labelRemind");
+    document.getElementById("addCityBtn").textContent = t("addCity");
+    document.getElementById("cancelBtn").textContent = t("cancel");
+    document.getElementById("saveBtn").textContent = t("save");
+    document.getElementById("tripName").placeholder = t("namePlaceholder");
+    // Select options
+    document.getElementById("optVacation").textContent = t("vacation");
+    document.getElementById("optBusiness").textContent = t("business");
+    document.getElementById("optWeekend").textContent = t("weekend");
+    document.getElementById("optTrip").textContent = t("trip");
+    document.getElementById("optOther").textContent = t("other");
+    document.getElementById("optDay0").textContent = t("day0");
+    document.getElementById("optDay1").textContent = t("day1");
+    document.getElementById("optDay3").textContent = t("day3");
+    document.getElementById("optDay7").textContent = t("day7");
+    document.getElementById("optDay14").textContent = t("day14");
+    // City input placeholders
+    var cityInputs = document.querySelectorAll(".city-name-input");
+    for (var i = 0; i < cityInputs.length; i++) cityInputs[i].placeholder = t("cityPlaceholder");
+  }
+
   // State
   var trips = [];
   var editingId = null;
   try { var s = storeGet("trippa_data"); if (s) trips = JSON.parse(s); } catch(e) { trips = []; }
 
-  // Cities DB
-  var CITIES = [
-    "Москва","Санкт-Петербург","Казань","Сочи","Калининград","Нижний Новгород",
-    "Екатеринбург","Новосибирск","Владивосток","Красноярск",
-    "Париж","Лондон","Берлин","Рим","Мадрид","Барселона","Амстердам","Прага","Вена","Будапешт",
-    "Варшава","Краков","Стамбул","Лиссабон","Дублин","Цюрих","Женева","Милан","Венеция","Флоренция",
-    "Мюнхен","Копенгаген","Осло","Стокгольм","Хельсинки","Афины","Бангкок","Токио","Сеул","Пекин",
-    "Шанхай","Сингапур","Дубай","Нью-Йорк","Лос-Анджелес","Сан-Франциско","Торонто","Сидней",
-    "Тбилиси","Батуми","Ереван","Баку","Ташкент","Самарканд","Бишкек","Алматы","Астана","Минск",
-    "Белград","Загреб","Братислава","Таллин","Рига","Вильнюс","Бухарест","София",
-    "Бали","Пхукет","Анталья","Каир","Марракеш","Кейптаун","Буэнос-Айрес","Мехико"
-  ];
-
   function suggest(q) {
     if (!q) return [];
     var lo = q.toLowerCase();
+    var cities = CITIES_DB[lang] || CITIES_DB.ru;
     var res = [];
-    for (var i = 0; i < CITIES.length && res.length < 6; i++) {
-      if (CITIES[i].toLowerCase().indexOf(lo) === 0) res.push(CITIES[i]);
+    for (var i = 0; i < cities.length && res.length < 6; i++) {
+      if (cities[i].toLowerCase().indexOf(lo) === 0) res.push(cities[i]);
     }
     return res;
   }
 
   // Helpers
   var EMOJI = { vacation:"\uD83C\uDF34", business:"\uD83D\uDCBC", weekend:"\u26FA", trip:"\uD83D\uDE97", other:"\uD83D\uDCCC" };
-  var LABELS = { vacation:"Отпуск", business:"Командировка", weekend:"Выходные", trip:"Поездка", other:"Другое" };
 
   function esc(str) { var d = document.createElement("div"); d.textContent = str || ""; return d.innerHTML; }
 
   function pluralDays(n) {
+    if (lang === "en") return n === 1 ? "day" : "days";
     var a = Math.abs(n);
     if (a % 10 === 1 && a % 100 !== 11) return "день";
     if ([2,3,4].indexOf(a % 10) >= 0 && [12,13,14].indexOf(a % 100) < 0) return "дня";
@@ -392,6 +572,7 @@ header h1 { font-size:2rem; }
   function fmtDate(ds) {
     if (!ds) return "";
     var p = ds.split("-");
+    if (lang === "en") return p[1] + "/" + p[2] + "/" + p[0].slice(2);
     return p[2] + "." + p[1] + "." + p[0].slice(2);
   }
 
@@ -404,12 +585,12 @@ header h1 { font-size:2rem; }
 
   function updateBanner() {
     var b = document.getElementById("notifBanner");
-    var t = document.getElementById("notifText");
-    if (!notifOk()) { t.textContent = "Уведомления не поддерживаются"; b.className = "notif-banner denied"; return; }
+    var tx = document.getElementById("notifText");
+    if (!notifOk()) { tx.textContent = t("notifUnsupported"); b.className = "notif-banner denied"; return; }
     var p = notifPerm();
-    if (p === "granted") { t.textContent = "Уведомления включены"; b.className = "notif-banner granted"; }
-    else if (p === "denied") { t.textContent = "Уведомления заблокированы"; b.className = "notif-banner denied"; }
-    else { t.textContent = "Нажмите, чтобы включить уведомления"; b.className = "notif-banner"; }
+    if (p === "granted") { tx.textContent = t("notifGranted"); b.className = "notif-banner granted"; }
+    else if (p === "denied") { tx.textContent = t("notifDenied"); b.className = "notif-banner denied"; }
+    else { tx.textContent = t("notifAsk"); b.className = "notif-banner"; }
   }
 
   function askNotif() {
@@ -430,7 +611,7 @@ header h1 { font-size:2rem; }
         var fd = new Date(tr.cities[0].dateFrom + "T00:00:00");
         var diff = Math.ceil((fd - today) / 86400000);
         if (diff === (tr.notifDays || 1)) {
-          var msg = diff === 0 ? "Сегодня" : "Через " + diff + " " + pluralDays(diff);
+          var msg = diff === 0 ? t("notifToday") : t("notifIn") + " " + diff + " " + pluralDays(diff);
           var names = [];
           for (var j = 0; j < tr.cities.length; j++) names.push(tr.cities[j].name);
           new Notification((EMOJI[tr.type] || "") + " " + tr.name, { body: msg + " \u2014 " + names.join(" \u2192 ") });
@@ -445,10 +626,10 @@ header h1 { font-size:2rem; }
     var up = [], arch = [];
 
     for (var i = 0; i < trips.length; i++) {
-      var t = trips[i];
-      if (!t.cities || !t.cities.length) { arch.push(t); continue; }
-      var last = new Date(t.cities[t.cities.length - 1].dateTo + "T00:00:00");
-      if (last < today) arch.push(t); else up.push(t);
+      var tr = trips[i];
+      if (!tr.cities || !tr.cities.length) { arch.push(tr); continue; }
+      var last = new Date(tr.cities[tr.cities.length - 1].dateTo + "T00:00:00");
+      if (last < today) arch.push(tr); else up.push(tr);
     }
 
     up.sort(function(a, b) {
@@ -460,7 +641,7 @@ header h1 { font-size:2rem; }
 
     var upEl = document.getElementById("upcomingList");
     if (up.length === 0) {
-      upEl.innerHTML = '<div class="empty-state"><div class="icon">&#128506;</div>Нет предстоящих поездок<br><span style="font-size:0.82rem;opacity:0.6">Добавьте первую!</span></div>';
+      upEl.innerHTML = '<div class="empty-state"><div class="icon">&#128506;</div>' + esc(t("noTrips")) + '<br><span style="font-size:0.82rem;opacity:0.6">' + esc(t("addFirst")) + '</span></div>';
     } else {
       var h = "";
       for (var i = 0; i < up.length; i++) h += card(up[i], today, false);
@@ -481,32 +662,34 @@ header h1 { font-size:2rem; }
     bindDeletes();
   }
 
-  function card(t, today, isArch) {
+  function card(tr, today, isArch) {
     var cd = "";
-    if (!isArch && t.cities && t.cities.length) {
-      var first = new Date(t.cities[0].dateFrom + "T00:00:00");
-      var last = new Date(t.cities[t.cities.length-1].dateTo + "T00:00:00");
+    if (!isArch && tr.cities && tr.cities.length) {
+      var first = new Date(tr.cities[0].dateFrom + "T00:00:00");
+      var last = new Date(tr.cities[tr.cities.length-1].dateTo + "T00:00:00");
       if (today >= first && today <= last) {
-        cd = '<span class="active-label">Сейчас в поездке!</span>';
+        cd = '<span class="active-label">' + esc(t("traveling")) + '</span>';
       } else {
         var diff = Math.ceil((first - today) / 86400000);
-        if (diff === 0) cd = '<span class="active-label">Отъезд сегодня!</span>';
-        else if (diff > 0) cd = 'через <span class="days-num">' + diff + '</span> ' + pluralDays(diff);
+        if (diff === 0) cd = '<span class="active-label">' + esc(t("departToday")) + '</span>';
+        else if (diff > 0) cd = esc(t("inPrefix")) + ' <span class="days-num">' + diff + '</span> ' + esc(pluralDays(diff));
       }
     }
 
     var ci = "";
-    for (var j = 0; j < (t.cities||[]).length; j++) {
-      var c = t.cities[j];
+    for (var j = 0; j < (tr.cities||[]).length; j++) {
+      var c = tr.cities[j];
       ci += '<div class="city-row"><span class="dot"></span><span class="city-name">' +
         esc(c.name) + '</span><span class="city-dates">' +
         fmtDate(c.dateFrom) + ' \u2014 ' + fmtDate(c.dateTo) + '</span></div>';
     }
 
-    return '<div class="trip-card type-' + esc(t.type) + '">' +
-      '<button class="delete-btn" data-del="' + esc(t.id) + '">\u2715</button>' +
-      '<span class="type-badge">' + (EMOJI[t.type]||"") + ' ' + (LABELS[t.type]||"") + '</span>' +
-      '<div class="trip-name">' + esc(t.name) + '</div>' +
+    var typeLabel = t(tr.type);
+
+    return '<div class="trip-card type-' + esc(tr.type) + '">' +
+      '<button class="delete-btn" data-del="' + esc(tr.id) + '">\u2715</button>' +
+      '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' +
+      '<div class="trip-name">' + esc(tr.name) + '</div>' +
       '<div class="cities">' + ci + '</div>' +
       (cd ? '<div class="countdown">' + cd + '</div>' : '') +
       '</div>';
@@ -517,7 +700,7 @@ header h1 { font-size:2rem; }
     for (var i = 0; i < btns.length; i++) {
       (function(btn) {
         btn.onclick = function() {
-          if (confirm("Удалить поездку?")) {
+          if (confirm(t("deleteConfirm"))) {
             var id = btn.getAttribute("data-del");
             var next = [];
             for (var j = 0; j < trips.length; j++) { if (trips[j].id !== id) next.push(trips[j]); }
@@ -533,17 +716,17 @@ header h1 { font-size:2rem; }
   // Modal
   function openModal(id) {
     editingId = id || null;
-    document.getElementById("modalTitle").textContent = id ? "Редактировать" : "Новая поездка";
+    document.getElementById("modalTitle").textContent = id ? t("editTrip") : t("newTrip");
     document.getElementById("citiesContainer").innerHTML = "";
 
     if (id) {
-      var t = null;
-      for (var i = 0; i < trips.length; i++) { if (trips[i].id === id) { t = trips[i]; break; } }
-      if (t) {
-        document.getElementById("tripType").value = t.type;
-        document.getElementById("tripName").value = t.name;
-        document.getElementById("notifDays").value = t.notifDays || 1;
-        for (var j = 0; j < t.cities.length; j++) addCityRow(t.cities[j].name, t.cities[j].dateFrom, t.cities[j].dateTo);
+      var tr = null;
+      for (var i = 0; i < trips.length; i++) { if (trips[i].id === id) { tr = trips[i]; break; } }
+      if (tr) {
+        document.getElementById("tripType").value = tr.type;
+        document.getElementById("tripName").value = tr.name;
+        document.getElementById("notifDays").value = tr.notifDays || 1;
+        for (var j = 0; j < tr.cities.length; j++) addCityRow(tr.cities[j].name, tr.cities[j].dateFrom, tr.cities[j].dateTo);
       }
     } else {
       document.getElementById("tripType").value = "vacation";
@@ -567,7 +750,7 @@ header h1 { font-size:2rem; }
     var wrap = document.createElement("div");
     wrap.className = "suggest-wrapper";
     var inp = document.createElement("input");
-    inp.type = "text"; inp.placeholder = "Город"; inp.value = name || "";
+    inp.type = "text"; inp.placeholder = t("cityPlaceholder"); inp.value = name || "";
     inp.className = "city-name-input"; inp.autocomplete = "off";
     var sl = document.createElement("div");
     sl.className = "suggest-list";
@@ -624,8 +807,8 @@ header h1 { font-size:2rem; }
       if (cn && cf && ct) cities.push({ name: cn, dateFrom: cf, dateTo: ct });
       else if (cn || cf || ct) valid = false;
     }
-    if (!cities.length) { alert("Добавьте хотя бы один город с датами"); return; }
-    if (!valid) { alert("Заполните все поля для каждого города"); return; }
+    if (!cities.length) { alert(t("alertNoCity")); return; }
+    if (!valid) { alert(t("alertFillAll")); return; }
 
     if (editingId) {
       for (var i = 0; i < trips.length; i++) {
@@ -652,7 +835,16 @@ header h1 { font-size:2rem; }
   });
   document.getElementById("modalBox").addEventListener("click", function(e) { e.stopPropagation(); });
 
+  // Language toggle
+  document.getElementById("langToggle").addEventListener("click", function(e) {
+    var btn = e.target;
+    if (btn.tagName === "BUTTON" && btn.getAttribute("data-lang")) {
+      setLang(btn.getAttribute("data-lang"));
+    }
+  });
+
   // Init
+  applyLang();
   updateBanner();
   render();
   try { checkNotif(); } catch(e) {}
