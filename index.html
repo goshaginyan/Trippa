@@ -175,7 +175,11 @@ color:var(--text-dim); margin-bottom:6px; font-weight:500;
 input[type=”text”],
 input[type=”date”],
 select {
-width:100%;
+display:block;
+width:100% !important;
+min-width:0;
+max-width:100%;
+box-sizing:border-box;
 padding:12px 14px;
 background-color: var(--surface2) !important;
 background: var(--surface2) !important;
@@ -192,6 +196,11 @@ transition:border-color 0.2s;
 -moz-appearance:none;
 appearance:none;
 opacity:1;
+}
+#tripName {
+display:block;
+width:100% !important;
+box-sizing:border-box;
 }
 input[type=”text”]::placeholder,
 input[type=”date”]::placeholder {
