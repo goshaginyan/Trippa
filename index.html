@@ -1,7 +1,3 @@
------
-
------
-
 <!DOCTYPE html>
 
 <html lang="ru">
@@ -48,39 +44,39 @@ font-family: Georgia, ‘Times New Roman’, serif;
 font-size: 2.6rem;
 font-weight: 400;
 letter-spacing: -0.02em;
-color: var(–accent);
+color: var(--accent);
 }
-header p { color:var(–text-dim); font-size:0.95rem; margin-top:6px; font-weight:300; }
+header p { color:var(--text-dim); font-size:0.95rem; margin-top:6px; font-weight:300; }
 
 /* NOTIFICATION BANNER */
 .notif-banner {
-background:var(–surface); border:1px solid var(–border); border-radius:var(–radius-sm);
+background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
 padding:12px 16px; margin-bottom:24px; display:flex; align-items:center; gap:12px;
-font-size:0.88rem; color:var(–text-dim); cursor:pointer; transition:border-color 0.2s;
+font-size:0.88rem; color:var(--text-dim); cursor:pointer; transition:border-color 0.2s;
 }
-.notif-banner:hover { border-color:var(–accent); }
+.notif-banner:hover { border-color:var(--accent); }
 .notif-banner .icon { font-size:1.3rem; flex-shrink:0; }
-.notif-banner.granted { border-color:var(–vacation); color:var(–vacation); }
-.notif-banner.denied { border-color:var(–danger); color:var(–danger); }
+.notif-banner.granted { border-color:var(--vacation); color:var(--vacation); }
+.notif-banner.denied { border-color:var(--danger); color:var(--danger); }
 
 /* ADD BUTTON */
 .add-btn {
-width:100%; padding:14px; background:var(–accent); color:var(–bg); border:none;
-border-radius:var(–radius); font-family:inherit; font-size:1rem; font-weight:600;
+width:100%; padding:14px; background:var(--accent); color:var(--bg); border:none;
+border-radius:var(--radius); font-family:inherit; font-size:1rem; font-weight:600;
 cursor:pointer; transition:all 0.2s; margin-bottom:32px; letter-spacing:0.02em;
 -webkit-appearance:none;
 }
-.add-btn:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 24px var(–accent-glow); }
+.add-btn:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 24px var(--accent-glow); }
 
 /* SECTION TITLE */
 .section-title {
 font-size:0.8rem; text-transform:uppercase; letter-spacing:0.12em;
-color:var(–text-dim); margin-bottom:14px; font-weight:500;
+color:var(--text-dim); margin-bottom:14px; font-weight:500;
 }
 
 /* TRIP CARD */
 .trip-card {
-background:var(–surface); border:1px solid var(–border); border-radius:var(–radius);
+background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
 padding:20px; margin-bottom:12px; position:relative; transition:border-color 0.2s, transform 0.2s;
 animation: slideIn 0.3s ease-out;
 }
@@ -91,56 +87,56 @@ animation: slideIn 0.3s ease-out;
 display:inline-block; font-size:0.72rem; font-weight:600; text-transform:uppercase;
 letter-spacing:0.1em; padding:3px 10px; border-radius:20px; margin-bottom:10px;
 }
-.type-business .type-badge { background:rgba(240,160,80,0.15); color:var(–business); }
-.type-vacation .type-badge { background:rgba(80,200,120,0.15); color:var(–vacation); }
-.type-weekend .type-badge { background:rgba(199,125,255,0.15); color:var(–weekend); }
-.type-trip .type-badge { background:rgba(91,140,247,0.15); color:var(–trip); }
-.type-other .type-badge { background:rgba(255,107,138,0.15); color:var(–other); }
+.type-business .type-badge { background:rgba(240,160,80,0.15); color:var(--business); }
+.type-vacation .type-badge { background:rgba(80,200,120,0.15); color:var(--vacation); }
+.type-weekend .type-badge { background:rgba(199,125,255,0.15); color:var(--weekend); }
+.type-trip .type-badge { background:rgba(91,140,247,0.15); color:var(--trip); }
+.type-other .type-badge { background:rgba(255,107,138,0.15); color:var(--other); }
 
 .trip-card .trip-name {
 font-family: Georgia, ‘Times New Roman’, serif;
-font-size:1.35rem; font-weight:400; margin-bottom:12px; color:var(–text);
+font-size:1.35rem; font-weight:400; margin-bottom:12px; color:var(--text);
 }
 .trip-card .cities { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
 .city-row { display:flex; align-items:center; gap:10px; font-size:0.88rem; }
 .city-row .city-name { font-weight:500; min-width:100px; }
-.city-row .city-dates { color:var(–text-dim); font-weight:300; }
+.city-row .city-dates { color:var(--text-dim); font-weight:300; }
 .city-row .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.type-business .dot { background:var(–business); }
-.type-vacation .dot { background:var(–vacation); }
-.type-weekend .dot { background:var(–weekend); }
-.type-trip .dot { background:var(–trip); }
-.type-other .dot { background:var(–other); }
+.type-business .dot { background:var(--business); }
+.type-vacation .dot { background:var(--vacation); }
+.type-weekend .dot { background:var(--weekend); }
+.type-trip .dot { background:var(--trip); }
+.type-other .dot { background:var(--other); }
 
 .trip-card .countdown {
-font-size:0.82rem; color:var(–text-dim); padding-top:12px;
-border-top:1px solid var(–border); display:flex; align-items:center; gap:6px;
+font-size:0.82rem; color:var(--text-dim); padding-top:12px;
+border-top:1px solid var(--border); display:flex; align-items:center; gap:6px;
 }
 .countdown .days-num { font-weight:700; font-size:1.1rem; }
-.type-business .days-num { color:var(–business); }
-.type-vacation .days-num { color:var(–vacation); }
-.type-weekend .days-num { color:var(–weekend); }
-.type-trip .days-num { color:var(–trip); }
-.type-other .days-num { color:var(–other); }
+.type-business .days-num { color:var(--business); }
+.type-vacation .days-num { color:var(--vacation); }
+.type-weekend .days-num { color:var(--weekend); }
+.type-trip .days-num { color:var(--trip); }
+.type-other .days-num { color:var(--other); }
 
 .trip-card .active-label {
-font-size:0.78rem; font-weight:600; color:var(–vacation);
+font-size:0.78rem; font-weight:600; color:var(--vacation);
 padding:2px 8px; background:rgba(80,200,120,0.12); border-radius:12px; display:inline-block;
 }
 .trip-card .delete-btn {
 position:absolute; top:16px; right:16px; background:none; border:none;
-color:var(–text-dim); font-size:1.1rem; cursor:pointer; opacity:0;
+color:var(--text-dim); font-size:1.1rem; cursor:pointer; opacity:0;
 transition:opacity 0.2s, color 0.2s; padding:4px;
 }
 .trip-card:hover .delete-btn { opacity:1; }
-.trip-card .delete-btn:hover { color:var(–danger); }
+.trip-card .delete-btn:hover { color:var(--danger); }
 
 /* ARCHIVE */
 .archive-section { margin-top:48px; }
 .archive-section .trip-card { opacity:0.5; border-style:dashed; }
 .archive-section .trip-card:hover { opacity:0.75; }
 
-.empty-state { text-align:center; padding:48px 20px; color:var(–text-dim); font-size:0.95rem; }
+.empty-state { text-align:center; padding:48px 20px; color:var(--text-dim); font-size:0.95rem; }
 .empty-state .icon { font-size:2.4rem; margin-bottom:10px; }
 
 /* MODAL */
@@ -151,7 +147,7 @@ z-index:1000; align-items:center; justify-content:center; padding:16px;
 }
 .modal-overlay.open { display:flex; }
 .modal {
-background:var(–surface); border:1px solid var(–border); border-radius:var(–radius);
+background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
 width:100%; max-width:520px; max-height:90vh; overflow-y:auto; padding:28px;
 animation: modalIn 0.25s ease-out;
 }
@@ -159,14 +155,14 @@ animation: modalIn 0.25s ease-out;
 
 .modal h2 {
 font-family: Georgia, ‘Times New Roman’, serif;
-font-size:1.5rem; font-weight:400; margin-bottom:24px; color:var(–text);
+font-size:1.5rem; font-weight:400; margin-bottom:24px; color:var(--text);
 }
 
 /* FORM ELEMENTS — iOS Safari fix */
 .form-group { margin-bottom:18px; }
 .form-group label {
 display:block; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em;
-color:var(–text-dim); margin-bottom:6px; font-weight:500;
+color:var(--text-dim); margin-bottom:6px; font-weight:500;
 }
 
 input[type=“text”],
@@ -174,10 +170,10 @@ input[type=“date”],
 select {
 width:100%;
 padding:10px 14px;
-background-color: var(–surface2) !important;
-border:1px solid var(–border);
-border-radius:var(–radius-sm);
-color: var(–text) !important;
+background-color: var(--surface2) !important;
+border:1px solid var(--border);
+border-radius:var(--radius-sm);
+color: var(--text) !important;
 font-family:inherit;
 font-size:16px;
 outline:none;
@@ -189,7 +185,7 @@ appearance:none;
 input[type=“text”]:focus,
 input[type=“date”]:focus,
 select:focus {
-border-color:var(–accent);
+border-color:var(--accent);
 }
 
 /* Custom select arrow */
@@ -200,10 +196,10 @@ background-position: right 12px center;
 padding-right: 36px;
 cursor:pointer;
 }
-select option { background:var(–surface2); color:var(–text); }
+select option { background:var(--surface2); color:var(--text); }
 
 /* Date input placeholder color */
-input[type=“date”]::-webkit-datetime-edit { color:var(–text); }
+input[type=“date”]::-webkit-datetime-edit { color:var(--text); }
 input[type=“date”]::-webkit-calendar-picker-indicator {
 filter: invert(0.7);
 cursor: pointer;
@@ -215,48 +211,48 @@ display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px; align-items:start
 }
 .city-input-row input { font-size:16px; padding:9px 12px; }
 .remove-city-btn {
-background:none; border:none; color:var(–text-dim); font-size:1.2rem;
+background:none; border:none; color:var(--text-dim); font-size:1.2rem;
 cursor:pointer; padding:8px 4px; transition:color 0.2s;
 -webkit-appearance:none;
 }
-.remove-city-btn:hover { color:var(–danger); }
+.remove-city-btn:hover { color:var(--danger); }
 
 .add-city-btn {
-background:var(–surface2); border:1px dashed var(–border); border-radius:var(–radius-sm);
-color:var(–text-dim); font-family:inherit; font-size:0.85rem; padding:8px;
+background:var(--surface2); border:1px dashed var(--border); border-radius:var(--radius-sm);
+color:var(--text-dim); font-family:inherit; font-size:0.85rem; padding:8px;
 cursor:pointer; transition:all 0.2s; width:100%; margin-top:4px;
 -webkit-appearance:none;
 }
-.add-city-btn:hover { border-color:var(–accent); color:var(–accent); }
+.add-city-btn:hover { border-color:var(--accent); color:var(--accent); }
 
 /* SUGGESTIONS */
 .suggest-wrapper { position:relative; }
 .suggest-list {
-position:absolute; top:100%; left:0; right:0; background:var(–surface2);
-border:1px solid var(–border); border-radius:var(–radius-sm);
+position:absolute; top:100%; left:0; right:0; background:var(--surface2);
+border:1px solid var(--border); border-radius:var(--radius-sm);
 max-height:160px; overflow-y:auto; z-index:10; display:none;
 }
 .suggest-list.open { display:block; }
-.suggest-item { padding:8px 12px; font-size:0.85rem; cursor:pointer; transition:background 0.15s; color:var(–text); }
-.suggest-item:hover, .suggest-item:active { background:var(–border); }
+.suggest-item { padding:8px 12px; font-size:0.85rem; cursor:pointer; transition:background 0.15s; color:var(--text); }
+.suggest-item:hover, .suggest-item:active { background:var(--border); }
 
 /* MODAL ACTIONS */
 .modal-actions { display:flex; gap:10px; margin-top:24px; }
 .modal-actions button {
-flex:1; padding:12px; border-radius:var(–radius-sm); font-family:inherit;
+flex:1; padding:12px; border-radius:var(--radius-sm); font-family:inherit;
 font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s;
 border:none; -webkit-appearance:none;
 }
-.btn-save { background:var(–accent); color:var(–bg); }
+.btn-save { background:var(--accent); color:var(--bg); }
 .btn-save:hover { filter:brightness(1.1); }
 .btn-save:active { filter:brightness(0.9); }
-.btn-cancel { background:var(–surface2); color:var(–text-dim); border:1px solid var(–border) !important; }
-.btn-cancel:hover { border-color:var(–text-dim) !important; color:var(–text); }
+.btn-cancel { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border) !important; }
+.btn-cancel:hover { border-color:var(--text-dim) !important; color:var(--text); }
 
 /* NOTIF SETTING */
 .notif-setting {
-display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(–text-dim);
-margin-bottom:18px; padding:10px 14px; background:var(–surface2); border-radius:var(–radius-sm);
+display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(--text-dim);
+margin-bottom:18px; padding:10px 14px; background:var(--surface2); border-radius:var(--radius-sm);
 }
 .notif-setting select { width:auto; padding:6px 10px; font-size:16px; }
 
@@ -301,7 +297,6 @@ header h1 { font-size:2rem; }
   <div class="modal" id="modalBox">
     <h2 id="modalTitle">Новая поездка</h2>
 
-```
 <div class="form-group">
   <label>Тип</label>
   <select id="tripType">
@@ -339,7 +334,6 @@ header h1 { font-size:2rem; }
   <button class="btn-cancel" id="cancelBtn">Отмена</button>
   <button class="btn-save" id="saveBtn">Сохранить</button>
 </div>
-```
 
   </div>
 </div>
