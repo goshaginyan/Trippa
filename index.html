@@ -1,9 +1,14 @@
+-----
+
+-----
+
 <!DOCTYPE html>
 
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
 <title>Trippa</title>
 <style>
 :root {
@@ -23,6 +28,7 @@
   --danger: #ff4d6a;
   --radius: 14px;
   --radius-sm: 8px;
+  color-scheme: dark;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
@@ -31,18 +37,22 @@ body {
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
 }
 .container { max-width:720px; margin:0 auto; padding:24px 16px 80px; }
 
+/* HEADER */
 header { text-align:center; padding:40px 0 32px; }
 header h1 {
 font-family: Georgia, ‘Times New Roman’, serif;
-font-size: 2.6rem; font-weight:400; letter-spacing:-0.02em;
-background: linear-gradient(135deg, var(–text) 0%, var(–accent) 100%);
--webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+font-size: 2.6rem;
+font-weight: 400;
+letter-spacing: -0.02em;
+color: var(–accent);
 }
 header p { color:var(–text-dim); font-size:0.95rem; margin-top:6px; font-weight:300; }
 
+/* NOTIFICATION BANNER */
 .notif-banner {
 background:var(–surface); border:1px solid var(–border); border-radius:var(–radius-sm);
 padding:12px 16px; margin-bottom:24px; display:flex; align-items:center; gap:12px;
@@ -53,18 +63,22 @@ font-size:0.88rem; color:var(–text-dim); cursor:pointer; transition:border-col
 .notif-banner.granted { border-color:var(–vacation); color:var(–vacation); }
 .notif-banner.denied { border-color:var(–danger); color:var(–danger); }
 
+/* ADD BUTTON */
 .add-btn {
 width:100%; padding:14px; background:var(–accent); color:var(–bg); border:none;
 border-radius:var(–radius); font-family:inherit; font-size:1rem; font-weight:600;
 cursor:pointer; transition:all 0.2s; margin-bottom:32px; letter-spacing:0.02em;
+-webkit-appearance:none;
 }
 .add-btn:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 24px var(–accent-glow); }
 
+/* SECTION TITLE */
 .section-title {
 font-size:0.8rem; text-transform:uppercase; letter-spacing:0.12em;
 color:var(–text-dim); margin-bottom:14px; font-weight:500;
 }
 
+/* TRIP CARD */
 .trip-card {
 background:var(–surface); border:1px solid var(–border); border-radius:var(–radius);
 padding:20px; margin-bottom:12px; position:relative; transition:border-color 0.2s, transform 0.2s;
@@ -85,7 +99,7 @@ letter-spacing:0.1em; padding:3px 10px; border-radius:20px; margin-bottom:10px;
 
 .trip-card .trip-name {
 font-family: Georgia, ‘Times New Roman’, serif;
-font-size:1.35rem; font-weight:400; margin-bottom:12px;
+font-size:1.35rem; font-weight:400; margin-bottom:12px; color:var(–text);
 }
 .trip-card .cities { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
 .city-row { display:flex; align-items:center; gap:10px; font-size:0.88rem; }
@@ -121,6 +135,7 @@ transition:opacity 0.2s, color 0.2s; padding:4px;
 .trip-card:hover .delete-btn { opacity:1; }
 .trip-card .delete-btn:hover { color:var(–danger); }
 
+/* ARCHIVE */
 .archive-section { margin-top:48px; }
 .archive-section .trip-card { opacity:0.5; border-style:dashed; }
 .archive-section .trip-card:hover { opacity:0.75; }
@@ -128,10 +143,11 @@ transition:opacity 0.2s, color 0.2s; padding:4px;
 .empty-state { text-align:center; padding:48px 20px; color:var(–text-dim); font-size:0.95rem; }
 .empty-state .icon { font-size:2.4rem; margin-bottom:10px; }
 
+/* MODAL */
 .modal-overlay {
 display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
-backdrop-filter:blur(6px); z-index:1000; align-items:center;
-justify-content:center; padding:16px;
+backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+z-index:1000; align-items:center; justify-content:center; padding:16px;
 }
 .modal-overlay.open { display:flex; }
 .modal {
@@ -143,37 +159,77 @@ animation: modalIn 0.25s ease-out;
 
 .modal h2 {
 font-family: Georgia, ‘Times New Roman’, serif;
-font-size:1.5rem; font-weight:400; margin-bottom:24px;
+font-size:1.5rem; font-weight:400; margin-bottom:24px; color:var(–text);
 }
+
+/* FORM ELEMENTS — iOS Safari fix */
 .form-group { margin-bottom:18px; }
 .form-group label {
 display:block; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em;
 color:var(–text-dim); margin-bottom:6px; font-weight:500;
 }
-.form-group input, .form-group select {
-width:100%; padding:10px 14px; background:var(–surface2); border:1px solid var(–border);
-border-radius:var(–radius-sm); color:var(–text); font-family:inherit; font-size:0.92rem;
-outline:none; transition:border-color 0.2s;
+
+input[type=“text”],
+input[type=“date”],
+select {
+width:100%;
+padding:10px 14px;
+background-color: var(–surface2) !important;
+border:1px solid var(–border);
+border-radius:var(–radius-sm);
+color: var(–text) !important;
+font-family:inherit;
+font-size:16px;
+outline:none;
+transition:border-color 0.2s;
+-webkit-appearance:none;
+-moz-appearance:none;
+appearance:none;
 }
-.form-group input:focus, .form-group select:focus { border-color:var(–accent); }
-.form-group select { cursor:pointer; }
-.form-group select option { background:var(–surface2); }
+input[type=“text”]:focus,
+input[type=“date”]:focus,
+select:focus {
+border-color:var(–accent);
+}
+
+/* Custom select arrow */
+select {
+background-image: url(“data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘12’ viewBox=‘0 0 12 12’%3E%3Cpath fill=’%238b90a5’ d=‘M6 8L1 3h10z’/%3E%3C/svg%3E”);
+background-repeat: no-repeat;
+background-position: right 12px center;
+padding-right: 36px;
+cursor:pointer;
+}
+select option { background:var(–surface2); color:var(–text); }
+
+/* Date input placeholder color */
+input[type=“date”]::-webkit-datetime-edit { color:var(–text); }
+input[type=“date”]::-webkit-calendar-picker-indicator {
+filter: invert(0.7);
+cursor: pointer;
+}
 
 .cities-container { display:flex; flex-direction:column; gap:10px; }
-.city-input-row { display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px; align-items:start; }
-.city-input-row input { font-size:0.85rem; padding:9px 12px; }
+.city-input-row {
+display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px; align-items:start;
+}
+.city-input-row input { font-size:16px; padding:9px 12px; }
 .remove-city-btn {
 background:none; border:none; color:var(–text-dim); font-size:1.2rem;
 cursor:pointer; padding:8px 4px; transition:color 0.2s;
+-webkit-appearance:none;
 }
 .remove-city-btn:hover { color:var(–danger); }
+
 .add-city-btn {
 background:var(–surface2); border:1px dashed var(–border); border-radius:var(–radius-sm);
 color:var(–text-dim); font-family:inherit; font-size:0.85rem; padding:8px;
 cursor:pointer; transition:all 0.2s; width:100%; margin-top:4px;
+-webkit-appearance:none;
 }
 .add-city-btn:hover { border-color:var(–accent); color:var(–accent); }
 
+/* SUGGESTIONS */
 .suggest-wrapper { position:relative; }
 .suggest-list {
 position:absolute; top:100%; left:0; right:0; background:var(–surface2);
@@ -181,31 +237,37 @@ border:1px solid var(–border); border-radius:var(–radius-sm);
 max-height:160px; overflow-y:auto; z-index:10; display:none;
 }
 .suggest-list.open { display:block; }
-.suggest-item { padding:8px 12px; font-size:0.85rem; cursor:pointer; transition:background 0.15s; }
-.suggest-item:hover { background:var(–border); }
+.suggest-item { padding:8px 12px; font-size:0.85rem; cursor:pointer; transition:background 0.15s; color:var(–text); }
+.suggest-item:hover, .suggest-item:active { background:var(–border); }
 
+/* MODAL ACTIONS */
 .modal-actions { display:flex; gap:10px; margin-top:24px; }
 .modal-actions button {
 flex:1; padding:12px; border-radius:var(–radius-sm); font-family:inherit;
-font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s; border:none;
+font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s;
+border:none; -webkit-appearance:none;
 }
 .btn-save { background:var(–accent); color:var(–bg); }
 .btn-save:hover { filter:brightness(1.1); }
+.btn-save:active { filter:brightness(0.9); }
 .btn-cancel { background:var(–surface2); color:var(–text-dim); border:1px solid var(–border) !important; }
 .btn-cancel:hover { border-color:var(–text-dim) !important; color:var(–text); }
 
+/* NOTIF SETTING */
 .notif-setting {
 display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(–text-dim);
 margin-bottom:18px; padding:10px 14px; background:var(–surface2); border-radius:var(–radius-sm);
 }
-.notif-setting select { width:auto; padding:6px 10px; font-size:0.82rem; }
+.notif-setting select { width:auto; padding:6px 10px; font-size:16px; }
 
+/* MOBILE */
 @media (max-width:500px) {
 header h1 { font-size:2rem; }
 .city-input-row { grid-template-columns:1fr 1fr; gap:6px; }
 .city-input-row .suggest-wrapper { grid-column:1/-1; }
-.city-input-row input[type=“date”] { font-size:0.8rem; }
 .remove-city-btn { grid-column:1/-1; text-align:right; padding:2px; }
+/* On mobile, show delete button always */
+.trip-card .delete-btn { opacity:0.6; }
 }
 </style>
 
@@ -286,19 +348,18 @@ header h1 { font-size:2rem; }
 (function() {
   "use strict";
 
-  // ===== SAFE STORAGE =====
+  // Safe localStorage wrapper
   var storageOk = false;
-  try { localStorage.setItem("_test", "1"); localStorage.removeItem("_test"); storageOk = true; } catch(e) {}
-
+  try { localStorage.setItem("_t", "1"); localStorage.removeItem("_t"); storageOk = true; } catch(e) {}
   function storeGet(k) { if (!storageOk) return null; try { return localStorage.getItem(k); } catch(e) { return null; } }
   function storeSet(k, v) { if (!storageOk) return; try { localStorage.setItem(k, v); } catch(e) {} }
 
-  // ===== STATE =====
+  // State
   var trips = [];
   var editingId = null;
-  try { var s = storeGet("mytrips_data"); if (s) trips = JSON.parse(s); } catch(e) { trips = []; }
+  try { var s = storeGet("trippa_data"); if (s) trips = JSON.parse(s); } catch(e) { trips = []; }
 
-  // ===== CITIES DB =====
+  // Cities DB
   var CITIES = [
     "Москва","Санкт-Петербург","Казань","Сочи","Калининград","Нижний Новгород",
     "Екатеринбург","Новосибирск","Владивосток","Красноярск",
@@ -321,7 +382,7 @@ header h1 { font-size:2rem; }
     return res;
   }
 
-  // ===== HELPERS =====
+  // Helpers
   var EMOJI = { vacation:"\uD83C\uDF34", business:"\uD83D\uDCBC", weekend:"\u26FA", trip:"\uD83D\uDE97", other:"\uD83D\uDCCC" };
   var LABELS = { vacation:"Отпуск", business:"Командировка", weekend:"Выходные", trip:"Поездка", other:"Другое" };
 
@@ -341,9 +402,9 @@ header h1 { font-size:2rem; }
   }
 
   function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
-  function persist() { storeSet("mytrips_data", JSON.stringify(trips)); }
+  function persist() { storeSet("trippa_data", JSON.stringify(trips)); }
 
-  // ===== NOTIFICATIONS =====
+  // Notifications
   function notifOk() { try { return "Notification" in window; } catch(e) { return false; } }
   function notifPerm() { try { return Notification.permission; } catch(e) { return "unsupported"; } }
 
@@ -367,8 +428,8 @@ header h1 { font-size:2rem; }
       if (!notifOk() || notifPerm() !== "granted") return;
       var today = new Date(); today.setHours(0,0,0,0);
       var key = today.toISOString().split("T")[0];
-      if (storeGet("mytrips_notif_check") === key) return;
-      storeSet("mytrips_notif_check", key);
+      if (storeGet("trippa_notif") === key) return;
+      storeSet("trippa_notif", key);
       for (var i = 0; i < trips.length; i++) {
         var tr = trips[i];
         if (!tr.cities || !tr.cities.length) continue;
@@ -378,13 +439,13 @@ header h1 { font-size:2rem; }
           var msg = diff === 0 ? "Сегодня" : "Через " + diff + " " + pluralDays(diff);
           var names = [];
           for (var j = 0; j < tr.cities.length; j++) names.push(tr.cities[j].name);
-          new Notification((EMOJI[tr.type] || "") + " " + tr.name, { body: msg + " — " + names.join(" > ") });
+          new Notification((EMOJI[tr.type] || "") + " " + tr.name, { body: msg + " \u2014 " + names.join(" \u2192 ") });
         }
       }
     } catch(e) {}
   }
 
-  // ===== RENDER =====
+  // Render
   function render() {
     var today = new Date(); today.setHours(0,0,0,0);
     var up = [], arch = [];
@@ -423,7 +484,6 @@ header h1 { font-size:2rem; }
       archSec.style.display = "none";
     }
 
-    // Bind delete buttons via event delegation
     bindDeletes();
   }
 
@@ -476,7 +536,7 @@ header h1 { font-size:2rem; }
     }
   }
 
-  // ===== MODAL =====
+  // Modal
   function openModal(id) {
     editingId = id || null;
     document.getElementById("modalTitle").textContent = id ? "Редактировать" : "Новая поездка";
@@ -510,7 +570,6 @@ header h1 { font-size:2rem; }
     var row = document.createElement("div");
     row.className = "city-input-row";
 
-    // City name with suggestions
     var wrap = document.createElement("div");
     wrap.className = "suggest-wrapper";
     var inp = document.createElement("input");
@@ -521,27 +580,25 @@ header h1 { font-size:2rem; }
     wrap.appendChild(inp);
     wrap.appendChild(sl);
 
-    // Date inputs
     var fi = document.createElement("input"); fi.type = "date"; fi.className = "city-from"; fi.value = dateFrom || "";
     var ti = document.createElement("input"); ti.type = "date"; ti.className = "city-to"; ti.value = dateTo || "";
 
-    // Remove button
     var rb = document.createElement("button"); rb.className = "remove-city-btn"; rb.textContent = "\u2715";
     rb.addEventListener("click", function() { row.remove(); });
 
     row.appendChild(wrap); row.appendChild(fi); row.appendChild(ti); row.appendChild(rb);
     container.appendChild(row);
 
-    // Suggestion logic
+    // Suggestions
     inp.addEventListener("input", function() {
       var res = suggest(inp.value);
       if (!res.length) { sl.classList.remove("open"); return; }
       var html = "";
-      for (var i = 0; i < res.length; i++) html += '<div class="suggest-item">' + esc(res[i]) + '</div>';
+      for (var k = 0; k < res.length; k++) html += '<div class="suggest-item">' + esc(res[k]) + '</div>';
       sl.innerHTML = html;
       sl.classList.add("open");
     });
-    inp.addEventListener("blur", function() { setTimeout(function() { sl.classList.remove("open"); }, 150); });
+    inp.addEventListener("blur", function() { setTimeout(function() { sl.classList.remove("open"); }, 200); });
     inp.addEventListener("focus", function() { if (inp.value) inp.dispatchEvent(new Event("input")); });
     sl.addEventListener("click", function(e) {
       if (e.target.classList.contains("suggest-item")) {
@@ -550,7 +607,7 @@ header h1 { font-size:2rem; }
       }
     });
 
-    // Auto-fill from previous
+    // Auto-fill dateFrom from previous row
     var rows = container.querySelectorAll(".city-input-row");
     if (rows.length > 1 && !dateFrom) {
       var prev = rows[rows.length - 2].querySelector(".city-to");
@@ -590,7 +647,7 @@ header h1 { font-size:2rem; }
     persist(); closeModal(); render();
   }
 
-  // ===== BIND EVENTS =====
+  // Event bindings
   document.getElementById("notifBanner").addEventListener("click", askNotif);
   document.getElementById("addBtn").addEventListener("click", function() { openModal(null); });
   document.getElementById("addCityBtn").addEventListener("click", function() { addCityRow("","",""); });
@@ -601,7 +658,7 @@ header h1 { font-size:2rem; }
   });
   document.getElementById("modalBox").addEventListener("click", function(e) { e.stopPropagation(); });
 
-  // ===== INIT =====
+  // Init
   updateBanner();
   render();
   try { checkNotif(); } catch(e) {}
