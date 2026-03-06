@@ -5,6 +5,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trippa">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <title>Trippa</title>
 <style>
 :root {
@@ -579,9 +586,24 @@ header h1 { font-size:2rem; }
   function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
   function persist() { storeSet("trippa_data", JSON.stringify(trips)); }
 
-  // Notifications
-  function notifOk() { try { return "Notification" in window; } catch(e) { return false; } }
-  function notifPerm() { try { return Notification.permission; } catch(e) { return "unsupported"; } }
+  // Service Worker & Notifications
+  var swReg = null;
+
+  function registerSW() {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").then(function(reg) {
+        swReg = reg;
+        updateBanner();
+      }).catch(function() {});
+    }
+  }
+
+  function notifOk() {
+    try { return "Notification" in window; } catch(e) { return false; }
+  }
+  function notifPerm() {
+    try { return Notification.permission; } catch(e) { return "unsupported"; }
+  }
 
   function updateBanner() {
     var b = document.getElementById("notifBanner");
@@ -595,7 +617,11 @@ header h1 { font-size:2rem; }
 
   function askNotif() {
     if (!notifOk() || notifPerm() === "granted") return;
-    try { Notification.requestPermission().then(function() { updateBanner(); }); } catch(e) {}
+    try {
+      Notification.requestPermission().then(function() {
+        updateBanner();
+      });
+    } catch(e) {}
   }
 
   function checkNotif() {
@@ -605,16 +631,23 @@ header h1 { font-size:2rem; }
       var key = today.toISOString().split("T")[0];
       if (storeGet("trippa_notif") === key) return;
       storeSet("trippa_notif", key);
-      for (var i = 0; i < trips.length; i++) {
-        var tr = trips[i];
-        if (!tr.cities || !tr.cities.length) continue;
-        var fd = new Date(tr.cities[0].dateFrom + "T00:00:00");
-        var diff = Math.ceil((fd - today) / 86400000);
-        if (diff === (tr.notifDays || 1)) {
-          var msg = diff === 0 ? t("notifToday") : t("notifIn") + " " + diff + " " + pluralDays(diff);
-          var names = [];
-          for (var j = 0; j < tr.cities.length; j++) names.push(tr.cities[j].name);
-          new Notification((EMOJI[tr.type] || "") + " " + tr.name, { body: msg + " \u2014 " + names.join(" \u2192 ") });
+
+      // Use SW for notifications (required for iOS PWA)
+      if (swReg && swReg.active) {
+        swReg.active.postMessage({ type: "CHECK_REMINDERS", trips: trips, lang: lang });
+      } else {
+        // Fallback: direct notifications (non-PWA browsers)
+        for (var i = 0; i < trips.length; i++) {
+          var tr = trips[i];
+          if (!tr.cities || !tr.cities.length) continue;
+          var fd = new Date(tr.cities[0].dateFrom + "T00:00:00");
+          var diff = Math.ceil((fd - today) / 86400000);
+          if (diff === (tr.notifDays || 1)) {
+            var msg = diff === 0 ? t("notifToday") : t("notifIn") + " " + diff + " " + pluralDays(diff);
+            var names = [];
+            for (var j = 0; j < tr.cities.length; j++) names.push(tr.cities[j].name);
+            new Notification((EMOJI[tr.type] || "") + " " + tr.name, { body: msg + " \u2014 " + names.join(" \u2192 ") });
+          }
         }
       }
     } catch(e) {}
@@ -844,6 +877,7 @@ header h1 { font-size:2rem; }
   });
 
   // Init
+  registerSW();
   applyLang();
   updateBanner();
   render();
