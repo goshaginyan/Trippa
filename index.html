@@ -176,7 +176,7 @@ input[type=”text”],
 input[type=”date”],
 select {
 width:100%;
-padding:10px 14px;
+padding:12px 14px;
 background-color: var(--surface2) !important;
 background: var(--surface2) !important;
 border:1px solid var(--border) !important;
@@ -185,11 +185,13 @@ color: var(--text) !important;
 -webkit-text-fill-color: var(--text);
 font-family:inherit;
 font-size:16px;
+line-height:1.4;
 outline:none;
 transition:border-color 0.2s;
 -webkit-appearance:none;
 -moz-appearance:none;
 appearance:none;
+opacity:1;
 }
 input[type=”text”]::placeholder,
 input[type=”date”]::placeholder {
@@ -229,7 +231,14 @@ cursor: pointer;
 .city-input-row {
 display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px; align-items:start;
 }
-.city-input-row input { font-size:16px; padding:9px 12px; }
+.city-input-row input {
+font-size:16px; padding:10px 12px;
+background-color: var(--surface2) !important;
+background: var(--surface2) !important;
+color: var(--text) !important;
+-webkit-text-fill-color: var(--text);
+opacity:1;
+}
 .remove-city-btn {
 background:none; border:none; color:var(--text-dim); font-size:1.2rem;
 cursor:pointer; padding:8px 4px; transition:color 0.2s;
