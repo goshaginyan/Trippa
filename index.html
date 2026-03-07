@@ -313,7 +313,7 @@ background:var(--accent); color:var(--bg); border-color:var(--accent);
 /* STORY BUTTON */
 .trip-card .story-btn {
 position:absolute; top:16px; right:44px; background:none; border:none;
-color:var(--text-dim); font-size:1.05rem; cursor:pointer; opacity:0;
+color:var(--text-dim); font-size:1.3rem; cursor:pointer; opacity:0;
 transition:opacity 0.2s, color 0.2s; padding:4px;
 }
 .trip-card:hover .story-btn { opacity:1; }
@@ -788,7 +788,7 @@ header h1 { font-size:2rem; }
     var typeLabel = t(tr.type);
 
     return '<div class="trip-card type-' + esc(tr.type) + '">' +
-      '<button class="story-btn" data-story="' + esc(tr.id) + '" title="Instagram Story">&#9998;</button>' +
+      '<button class="story-btn" data-story="' + esc(tr.id) + '" title="Instagram Story"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>' +
       '<button class="delete-btn" data-del="' + esc(tr.id) + '">\u2715</button>' +
       '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' +
       '<div class="trip-name">' + esc(tr.name) + '</div>' +
