@@ -67,9 +67,9 @@ def fmt_date(ds: str) -> str:
         return ""
     try:
         d = datetime.strptime(ds, "%Y-%m-%d")
-        return d.strftime("%d.%m.%y")
+        return _escape(d.strftime("%d.%m.%y"))
     except ValueError:
-        return ds
+        return _escape(ds)
 
 
 def fmt_trip(tr: dict) -> str:
@@ -456,7 +456,7 @@ async def new_more_cities(update: Update, context) -> int:
 
     await query.edit_message_text(query.message.text)
     await query.message.reply_text(
-        f"✅ Поездка сохранена!\n\n{fmt_trip(trip)}",
+        f"✅ Поездка сохранена\\!\n\n{fmt_trip(trip)}",
         parse_mode="MarkdownV2",
     )
     context.user_data.pop("new_trip", None)
