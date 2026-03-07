@@ -9,6 +9,9 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardRemove,
     BotCommand,
     MenuButtonCommands,
 )
@@ -56,8 +59,36 @@ MONTH_NAMES_RU = [
     "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек",
 ]
 
+# ── Button labels (used for ReplyKeyboard and matching) ──────────────────
+BTN_NEW = "➕ Новая поездка"
+BTN_TRIPS = "📋 Мои поездки"
+BTN_DELETE = "🗑 Удалить"
+BTN_HELP = "❓ Помощь"
+BTN_CANCEL = "❌ Отмена"
+
 # Conversation states
 NAME, TYPE, CITY_PICK, CITY_NAME, CITY_FROM, CITY_TO, MORE_CITIES = range(7)
+
+
+# ── Keyboards ────────────────────────────────────────────────────────────
+
+def main_keyboard() -> ReplyKeyboardMarkup:
+    """Persistent main menu keyboard at the bottom of the chat."""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton(BTN_NEW), KeyboardButton(BTN_TRIPS)],
+            [KeyboardButton(BTN_DELETE), KeyboardButton(BTN_HELP)],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def cancel_keyboard() -> ReplyKeyboardMarkup:
+    """Keyboard shown during conversation with only Cancel button."""
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton(BTN_CANCEL)]],
+        resize_keyboard=True,
+    )
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
@@ -157,30 +188,34 @@ def shift_month(year: int, month: int, direction: int):
 # ── Command Handlers ─────────────────────────────────────────────────────
 
 async def cmd_start(update: Update, context) -> None:
+    user = update.effective_user
     await update.message.reply_text(
-        "🌍 <b>Trippa</b> — бот для планирования поездок!\n\n"
-        "Команды:\n"
-        "/new — новая поездка\n"
-        "/trips — список поездок\n"
-        "/delete — удалить поездку\n"
-        "/help — справка",
+        f"🌍 Привет, {_html(user.first_name)}!\n\n"
+        "<b>Trippa</b> — бот для планирования поездок.\n\n"
+        "Используй кнопки внизу или команды:\n"
+        f"  {BTN_NEW} — создать поездку\n"
+        f"  {BTN_TRIPS} — посмотреть поездки\n"
+        f"  {BTN_DELETE} — удалить поездку\n"
+        f"  {BTN_HELP} — справка",
         parse_mode="HTML",
+        reply_markup=main_keyboard(),
     )
 
 
 async def cmd_help(update: Update, context) -> None:
     await update.message.reply_text(
         "📖 <b>Как пользоваться Trippa Bot</b>\n\n"
-        "/new — создать поездку пошагово\n"
-        "/trips — показать все поездки\n"
-        "/delete — удалить поездку\n\n"
-        "При создании поездки бот спросит:\n"
-        "1. Название\n"
-        "2. Тип (отпуск, командировка...)\n"
-        "3. Города с датами\n\n"
-        "Город можно выбрать из списка или ввести вручную.\n"
-        "Даты выбираются через удобный календарь 📅",
+        f"<b>{BTN_NEW}</b> или /new — создать поездку пошагово\n"
+        f"<b>{BTN_TRIPS}</b> или /trips — показать все поездки\n"
+        f"<b>{BTN_DELETE}</b> или /delete — удалить поездку\n\n"
+        "При создании поездки:\n"
+        "1. Введите название\n"
+        "2. Выберите тип (отпуск, командировка...)\n"
+        "3. Выберите город из списка или введите свой\n"
+        "4. Выберите даты в календаре\n\n"
+        f"Нажмите <b>{BTN_CANCEL}</b> чтобы отменить создание.",
         parse_mode="HTML",
+        reply_markup=main_keyboard(),
     )
 
 
@@ -188,7 +223,11 @@ async def cmd_trips(update: Update, context) -> None:
     user_id = update.effective_user.id
     trips = storage.load_trips(user_id)
     if not trips:
-        await update.message.reply_text("У вас пока нет поездок. Создайте первую: /new")
+        await update.message.reply_text(
+            "У вас пока нет поездок.\n\nНажмите <b>➕ Новая поездка</b> чтобы создать первую!",
+            parse_mode="HTML",
+            reply_markup=main_keyboard(),
+        )
         return
 
     today = date.today()
@@ -213,27 +252,40 @@ async def cmd_trips(update: Update, context) -> None:
         key=lambda t: t.get("cities", [{}])[0].get("dateFrom", "9999-99-99")
     )
 
-    parts = []
+    # Send each trip as a separate message with its own delete button
     if upcoming:
-        parts.append("📋 <b>Предстоящие:</b>\n")
+        await update.message.reply_text(
+            "📋 <b>Предстоящие:</b>", parse_mode="HTML",
+        )
         for tr in upcoming:
-            parts.append(fmt_trip(tr))
-            parts.append("")
+            kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🗑 Удалить", callback_data=f"del:{tr['id']}"),
+            ]])
+            await update.message.reply_text(
+                fmt_trip(tr), parse_mode="HTML", reply_markup=kb,
+            )
 
     if archive:
-        parts.append("📦 <b>Архив:</b>\n")
+        await update.message.reply_text(
+            "📦 <b>Архив:</b>", parse_mode="HTML",
+        )
         for tr in archive:
-            parts.append(fmt_trip(tr))
-            parts.append("")
-
-    await update.message.reply_text("\n".join(parts), parse_mode="HTML")
+            kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🗑 Удалить", callback_data=f"del:{tr['id']}"),
+            ]])
+            await update.message.reply_text(
+                fmt_trip(tr), parse_mode="HTML", reply_markup=kb,
+            )
 
 
 # ── New Trip Conversation ────────────────────────────────────────────────
 
 async def new_start(update: Update, context) -> int:
     context.user_data["new_trip"] = {"cities": []}
-    await update.message.reply_text("✏️ Введите название поездки:")
+    await update.message.reply_text(
+        "✏️ Введите название поездки:",
+        reply_markup=cancel_keyboard(),
+    )
     return NAME
 
 
@@ -452,6 +504,7 @@ async def new_more_cities(update: Update, context) -> int:
     await query.message.reply_text(
         f"✅ Поездка сохранена!\n\n{fmt_trip(trip)}",
         parse_mode="HTML",
+        reply_markup=main_keyboard(),
     )
     context.user_data.pop("new_trip", None)
     context.user_data.pop("current_city", None)
@@ -461,7 +514,10 @@ async def new_more_cities(update: Update, context) -> int:
 async def new_cancel(update: Update, context) -> int:
     context.user_data.pop("new_trip", None)
     context.user_data.pop("current_city", None)
-    await update.message.reply_text("❌ Создание поездки отменено.")
+    await update.message.reply_text(
+        "❌ Создание поездки отменено.",
+        reply_markup=main_keyboard(),
+    )
     return ConversationHandler.END
 
 
@@ -471,7 +527,10 @@ async def cmd_delete(update: Update, context) -> None:
     user_id = update.effective_user.id
     trips = storage.load_trips(user_id)
     if not trips:
-        await update.message.reply_text("У вас нет поездок.")
+        await update.message.reply_text(
+            "У вас нет поездок.",
+            reply_markup=main_keyboard(),
+        )
         return
 
     keyboard = []
@@ -524,23 +583,29 @@ def main() -> None:
 
     # Conversation for creating new trip
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("new", new_start)],
+        entry_points=[
+            CommandHandler("new", new_start),
+            MessageHandler(filters.Text([BTN_NEW]), new_start),
+        ],
         states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_name)],
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_name)],
             TYPE: [CallbackQueryHandler(new_type, pattern=r"^type:")],
             CITY_PICK: [CallbackQueryHandler(new_city_pick, pattern=r"^city:")],
-            CITY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_name)],
+            CITY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_city_name)],
             CITY_FROM: [
                 CallbackQueryHandler(cal_from_callback, pattern=r"^from:"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_from),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_city_from),
             ],
             CITY_TO: [
                 CallbackQueryHandler(cal_to_callback, pattern=r"^to:"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_to),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_city_to),
             ],
             MORE_CITIES: [CallbackQueryHandler(new_more_cities, pattern=r"^more:")],
         },
-        fallbacks=[CommandHandler("cancel", new_cancel)],
+        fallbacks=[
+            CommandHandler("cancel", new_cancel),
+            MessageHandler(filters.Text([BTN_CANCEL]), new_cancel),
+        ],
         per_message=False,
     )
 
@@ -549,6 +614,10 @@ def main() -> None:
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("trips", cmd_trips))
     app.add_handler(CommandHandler("delete", cmd_delete))
+    # Handle reply keyboard button presses
+    app.add_handler(MessageHandler(filters.Text([BTN_TRIPS]), cmd_trips))
+    app.add_handler(MessageHandler(filters.Text([BTN_DELETE]), cmd_delete))
+    app.add_handler(MessageHandler(filters.Text([BTN_HELP]), cmd_help))
     app.add_handler(CallbackQueryHandler(delete_callback, pattern=r"^del:"))
 
     logger.info("Trippa bot is running...")
