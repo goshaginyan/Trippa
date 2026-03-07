@@ -310,14 +310,48 @@ color:var(--text-dim); cursor:pointer; transition:all 0.2s;
 background:var(--accent); color:var(--bg); border-color:var(--accent);
 }
 
+/* STORY BUTTON */
+.trip-card .story-btn {
+position:absolute; top:16px; right:44px; background:none; border:none;
+color:var(--text-dim); font-size:1.05rem; cursor:pointer; opacity:0;
+transition:opacity 0.2s, color 0.2s; padding:4px;
+}
+.trip-card:hover .story-btn { opacity:1; }
+.trip-card .story-btn:hover { color:var(--accent); }
+
+/* STORY OVERLAY */
+.story-overlay {
+display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75);
+backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+z-index:2000; align-items:center; justify-content:center; padding:16px;
+flex-direction:column; gap:16px;
+}
+.story-overlay.open { display:flex; }
+.story-preview {
+border-radius:16px; overflow:hidden;
+max-height:70vh; max-width:calc(70vh * 9 / 16);
+box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.story-preview canvas { width:100%; height:100%; display:block; }
+.story-actions { display:flex; gap:10px; }
+.story-actions button {
+padding:12px 28px; border-radius:var(--radius-sm); font-family:inherit;
+font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s; border:none;
+}
+.story-download { background:var(--accent); color:var(--bg); }
+.story-download:hover { filter:brightness(1.1); }
+.story-close { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border) !important; }
+.story-close:hover { border-color:var(--text-dim) !important; color:var(--text); }
+
 /* MOBILE */
 @media (max-width:500px) {
 header h1 { font-size:2rem; }
 .city-input-row { grid-template-columns:1fr 1fr; gap:6px; }
 .city-input-row .suggest-wrapper { grid-column:1/-1; }
 .remove-city-btn { grid-column:1/-1; text-align:right; padding:2px; }
-/* On mobile, show delete button always */
+/* On mobile, show delete/story button always */
 .trip-card .delete-btn { opacity:0.6; }
+.trip-card .story-btn { opacity:0.6; }
 }
 </style>
 
@@ -348,6 +382,14 @@ header h1 { font-size:2rem; }
   <div class="archive-section" id="archiveSection" style="display:none">
     <div class="section-title" id="archiveTitle">Архив</div>
     <div id="archiveList"></div>
+  </div>
+</div>
+
+<div class="story-overlay" id="storyOverlay">
+  <div class="story-preview" id="storyPreview"></div>
+  <div class="story-actions">
+    <button class="story-close" id="storyCloseBtn">Закрыть</button>
+    <button class="story-download" id="storyDownloadBtn">Скачать</button>
   </div>
 </div>
 
@@ -447,7 +489,11 @@ header h1 { font-size:2rem; }
       alertNoCity: "Добавьте хотя бы один город с датами",
       alertFillAll: "Заполните все поля для каждого города",
       notifToday: "Сегодня",
-      notifIn: "Через"
+      notifIn: "Через",
+      storyClose: "Закрыть",
+      storyDownload: "Скачать",
+      storyShare: "Поделиться",
+      storyRoute: "Маршрут"
     },
     en: {
       tagline: "Plan \u00b7 Share \u00b7 Travel",
@@ -488,7 +534,11 @@ header h1 { font-size:2rem; }
       alertNoCity: "Add at least one city with dates",
       alertFillAll: "Fill in all fields for each city",
       notifToday: "Today",
-      notifIn: "In"
+      notifIn: "In",
+      storyClose: "Close",
+      storyDownload: "Download",
+      storyShare: "Share",
+      storyRoute: "Route"
     }
   };
 
@@ -738,6 +788,7 @@ header h1 { font-size:2rem; }
     var typeLabel = t(tr.type);
 
     return '<div class="trip-card type-' + esc(tr.type) + '">' +
+      '<button class="story-btn" data-story="' + esc(tr.id) + '" title="Instagram Story">&#9998;</button>' +
       '<button class="delete-btn" data-del="' + esc(tr.id) + '">\u2715</button>' +
       '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' +
       '<div class="trip-name">' + esc(tr.name) + '</div>' +
@@ -762,6 +813,247 @@ header h1 { font-size:2rem; }
         };
       })(btns[i]);
     }
+    // Story buttons
+    var sBtns = document.querySelectorAll("[data-story]");
+    for (var i = 0; i < sBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          var id = btn.getAttribute("data-story");
+          for (var j = 0; j < trips.length; j++) {
+            if (trips[j].id === id) { generateStory(trips[j]); break; }
+          }
+        };
+      })(sBtns[i]);
+    }
+  }
+
+  // ====== Instagram Story Generator ======
+  var COLORS = {
+    vacation: { main: "#50c878", glow: "rgba(80,200,120,0.3)", bg1: "#0a1f14", bg2: "#0f1117" },
+    business: { main: "#f0a050", glow: "rgba(240,160,80,0.3)", bg1: "#1f1408", bg2: "#0f1117" },
+    weekend:  { main: "#c77dff", glow: "rgba(199,125,255,0.3)", bg1: "#1a0f27", bg2: "#0f1117" },
+    trip:     { main: "#5b8cf7", glow: "rgba(91,140,247,0.3)", bg1: "#0c1527", bg2: "#0f1117" },
+    other:    { main: "#ff6b8a", glow: "rgba(255,107,138,0.3)", bg1: "#1f0c14", bg2: "#0f1117" }
+  };
+
+  function generateStory(tr) {
+    var W = 1080, H = 1920;
+    var canvas = document.createElement("canvas");
+    canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext("2d");
+    var col = COLORS[tr.type] || COLORS.trip;
+
+    // Background gradient
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, col.bg1);
+    grad.addColorStop(0.5, col.bg2);
+    grad.addColorStop(1, col.bg1);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle decorative circles
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = col.main;
+    ctx.beginPath(); ctx.arc(W * 0.85, H * 0.12, 300, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W * 0.1, H * 0.85, 250, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Top decorative line
+    ctx.save();
+    ctx.strokeStyle = col.main;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, 160); ctx.lineTo(W - 80, 160);
+    ctx.stroke();
+    ctx.restore();
+
+    // Emoji + Type badge
+    var emoji = EMOJI[tr.type] || "";
+    var typeLabel = t(tr.type).toUpperCase();
+    ctx.font = "600 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+    ctx.fillStyle = col.main;
+    ctx.globalAlpha = 0.8;
+    ctx.textAlign = "center";
+    ctx.fillText(emoji + "  " + typeLabel, W / 2, 230);
+    ctx.globalAlpha = 1;
+
+    // Trip name
+    ctx.font = "400 72px Georgia, 'Times New Roman', serif";
+    ctx.fillStyle = "#e8eaf0";
+    ctx.textAlign = "center";
+    // Word wrap for long names
+    var nameWords = tr.name.split(" ");
+    var nameLines = [];
+    var currentLine = "";
+    for (var i = 0; i < nameWords.length; i++) {
+      var test = currentLine ? currentLine + " " + nameWords[i] : nameWords[i];
+      if (ctx.measureText(test).width > W - 160) {
+        if (currentLine) nameLines.push(currentLine);
+        currentLine = nameWords[i];
+      } else {
+        currentLine = test;
+      }
+    }
+    if (currentLine) nameLines.push(currentLine);
+
+    var nameY = 320;
+    for (var i = 0; i < nameLines.length; i++) {
+      ctx.fillText(nameLines[i], W / 2, nameY + i * 88);
+    }
+    var afterNameY = nameY + nameLines.length * 88 + 40;
+
+    // Date range
+    var cities = tr.cities || [];
+    if (cities.length) {
+      var fullFrom = fmtDate(cities[0].dateFrom);
+      var fullTo = fmtDate(cities[cities.length - 1].dateTo);
+      ctx.font = "300 36px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+      ctx.fillStyle = "#8b90a5";
+      ctx.fillText(fullFrom + "  —  " + fullTo, W / 2, afterNameY);
+    }
+
+    // Route section
+    var routeStartY = afterNameY + 100;
+    var routeX = 200;
+    var dotR = 14;
+    var stepH = Math.min(160, (H - routeStartY - 350) / Math.max(cities.length, 1));
+
+    // Route line (full)
+    if (cities.length > 1) {
+      ctx.save();
+      ctx.strokeStyle = col.main;
+      ctx.globalAlpha = 0.2;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(routeX, routeStartY);
+      ctx.lineTo(routeX, routeStartY + (cities.length - 1) * stepH);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Cities
+    for (var i = 0; i < cities.length; i++) {
+      var cy = routeStartY + i * stepH;
+      var c = cities[i];
+
+      // Glow behind dot
+      ctx.save();
+      ctx.fillStyle = col.glow;
+      ctx.beginPath(); ctx.arc(routeX, cy, dotR + 10, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Dot
+      ctx.fillStyle = col.main;
+      ctx.beginPath(); ctx.arc(routeX, cy, dotR, 0, Math.PI * 2); ctx.fill();
+
+      // Inner dot
+      ctx.fillStyle = "#0f1117";
+      ctx.beginPath(); ctx.arc(routeX, cy, dotR - 5, 0, Math.PI * 2); ctx.fill();
+
+      // City name
+      ctx.font = "500 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+      ctx.fillStyle = "#e8eaf0";
+      ctx.textAlign = "left";
+      ctx.fillText(c.name, routeX + 50, cy + 6);
+
+      // City dates
+      ctx.font = "300 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+      ctx.fillStyle = "#8b90a5";
+      ctx.fillText(fmtDate(c.dateFrom) + " — " + fmtDate(c.dateTo), routeX + 50, cy + 46);
+    }
+
+    // Arrow connectors between cities
+    if (cities.length > 1) {
+      for (var i = 0; i < cities.length - 1; i++) {
+        var y1 = routeStartY + i * stepH + dotR + 12;
+        var y2 = routeStartY + (i + 1) * stepH - dotR - 12;
+        ctx.save();
+        ctx.strokeStyle = col.main;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(routeX, y1);
+        ctx.lineTo(routeX, y2);
+        ctx.stroke();
+        // Small arrow
+        ctx.fillStyle = col.main;
+        ctx.beginPath();
+        ctx.moveTo(routeX - 6, y2 - 4);
+        ctx.lineTo(routeX + 6, y2 - 4);
+        ctx.lineTo(routeX, y2 + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Bottom decorative line
+    ctx.save();
+    ctx.strokeStyle = col.main;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, H - 200); ctx.lineTo(W - 80, H - 200);
+    ctx.stroke();
+    ctx.restore();
+
+    // Trippa branding
+    ctx.font = "400 48px Georgia, 'Times New Roman', serif";
+    ctx.fillStyle = col.main;
+    ctx.globalAlpha = 0.6;
+    ctx.textAlign = "center";
+    ctx.fillText("Trippa", W / 2, H - 130);
+    ctx.globalAlpha = 1;
+
+    // Show preview
+    showStoryPreview(canvas);
+  }
+
+  function showStoryPreview(canvas) {
+    var overlay = document.getElementById("storyOverlay");
+    var preview = document.getElementById("storyPreview");
+    preview.innerHTML = "";
+    preview.appendChild(canvas);
+    document.getElementById("storyCloseBtn").textContent = t("storyClose");
+    document.getElementById("storyDownloadBtn").textContent = t("storyDownload");
+    overlay.classList.add("open");
+
+    // Store canvas reference for download
+    overlay._canvas = canvas;
+  }
+
+  function closeStoryOverlay() {
+    document.getElementById("storyOverlay").classList.remove("open");
+  }
+
+  function downloadStory() {
+    var overlay = document.getElementById("storyOverlay");
+    var canvas = overlay._canvas;
+    if (!canvas) return;
+
+    // Try Web Share API first (mobile), fallback to download
+    if (navigator.share && navigator.canShare) {
+      canvas.toBlob(function(blob) {
+        var file = new File([blob], "trippa-story.png", { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file] }).catch(function() {});
+          return;
+        }
+        triggerDownload(canvas);
+      }, "image/png");
+    } else {
+      triggerDownload(canvas);
+    }
+  }
+
+  function triggerDownload(canvas) {
+    var a = document.createElement("a");
+    a.download = "trippa-story.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
   }
 
   // Modal
@@ -885,6 +1177,13 @@ header h1 { font-size:2rem; }
     if (e.target === this) closeModal();
   });
   document.getElementById("modalBox").addEventListener("click", function(e) { e.stopPropagation(); });
+
+  // Story overlay
+  document.getElementById("storyCloseBtn").addEventListener("click", closeStoryOverlay);
+  document.getElementById("storyDownloadBtn").addEventListener("click", downloadStory);
+  document.getElementById("storyOverlay").addEventListener("click", function(e) {
+    if (e.target === this) closeStoryOverlay();
+  });
 
   // Language toggle
   document.getElementById("langToggle").addEventListener("click", function(e) {
