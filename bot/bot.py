@@ -521,6 +521,14 @@ async def new_cancel(update: Update, context) -> int:
     return ConversationHandler.END
 
 
+async def fallback_start(update: Update, context) -> int:
+    """Handle /start while inside the conversation — reset and greet."""
+    context.user_data.pop("new_trip", None)
+    context.user_data.pop("current_city", None)
+    await cmd_start(update, context)
+    return ConversationHandler.END
+
+
 # ── Delete Trip ──────────────────────────────────────────────────────────
 
 async def cmd_delete(update: Update, context) -> None:
@@ -603,6 +611,7 @@ def main() -> None:
             MORE_CITIES: [CallbackQueryHandler(new_more_cities, pattern=r"^more:")],
         },
         fallbacks=[
+            CommandHandler("start", fallback_start),
             CommandHandler("cancel", new_cancel),
             MessageHandler(filters.Text([BTN_CANCEL]), new_cancel),
         ],
