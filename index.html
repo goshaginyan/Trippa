@@ -312,6 +312,63 @@ color:var(--text-dim); cursor:pointer; transition:all 0.2s;
 background:var(--accent); color:var(--bg); border-color:var(--accent);
 }
 
+/* PRIVACY TOGGLE */
+.privacy-setting {
+display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(--text-dim);
+margin-bottom:18px; padding:10px 14px; background:var(--surface2); border-radius:var(--radius-sm);
+}
+.privacy-toggle {
+position:relative; width:44px; height:24px; flex-shrink:0;
+}
+.privacy-toggle input { opacity:0; width:0; height:0; position:absolute; }
+.privacy-toggle .slider {
+position:absolute; inset:0; background:var(--border); border-radius:24px;
+cursor:pointer; transition:background 0.2s;
+}
+.privacy-toggle .slider:before {
+content:""; position:absolute; width:18px; height:18px; left:3px; top:3px;
+background:var(--text-dim); border-radius:50%; transition:all 0.2s;
+}
+.privacy-toggle input:checked + .slider { background:var(--vacation); }
+.privacy-toggle input:checked + .slider:before { transform:translateX(20px); background:#fff; }
+
+/* PRIVACY BADGE */
+.trip-card .privacy-badge {
+font-size:0.68rem; color:var(--text-dim); margin-left:8px; opacity:0.6;
+}
+
+/* SHARE BUTTON */
+.share-btn {
+width:100%; padding:12px; background:var(--surface); color:var(--text-dim); border:1px solid var(--border);
+border-radius:var(--radius); font-family:inherit; font-size:0.9rem; font-weight:500;
+cursor:pointer; transition:all 0.2s; margin-bottom:16px; display:flex; align-items:center;
+justify-content:center; gap:8px;
+}
+.share-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* SHARED VIEW */
+.shared-banner {
+background:var(--surface); border:1px solid var(--accent); border-radius:var(--radius);
+padding:16px 20px; margin-bottom:24px; text-align:center;
+}
+.shared-banner .shared-title { font-size:1rem; color:var(--accent); font-weight:600; margin-bottom:4px; }
+.shared-banner .shared-subtitle { font-size:0.82rem; color:var(--text-dim); }
+.shared-banner .own-link {
+display:inline-block; margin-top:10px; padding:8px 18px; background:var(--accent); color:var(--bg);
+border:none; border-radius:var(--radius-sm); font-family:inherit; font-size:0.85rem;
+font-weight:600; cursor:pointer; text-decoration:none; transition:filter 0.2s;
+}
+.shared-banner .own-link:hover { filter:brightness(1.1); }
+
+/* TOAST */
+.toast {
+position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(80px);
+background:var(--surface); border:1px solid var(--accent); color:var(--text);
+padding:12px 24px; border-radius:var(--radius); font-size:0.88rem;
+z-index:3000; opacity:0; transition:all 0.3s ease; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
 /* STORY BUTTON */
 .trip-card .story-btn {
 position:absolute; top:16px; right:44px; background:none; border:none;
@@ -374,6 +431,10 @@ header h1 { font-size:2rem; }
     <span id="notifText">Нажмите, чтобы включить уведомления</span>
   </div>
 
+<button class="share-btn" id="shareBtn">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  <span id="shareBtnText">Поделиться поездками</span>
+</button>
 <button class="add-btn" id="addBtn">+ Добавить поездку</button>
 
   <div id="upcomingSection">
@@ -421,6 +482,14 @@ header h1 { font-size:2rem; }
   <button class="add-city-btn" id="addCityBtn">+ Добавить город</button>
 </div>
 
+<div class="privacy-setting">
+  <label class="privacy-toggle">
+    <input type="checkbox" id="tripPublic">
+    <span class="slider"></span>
+  </label>
+  <span id="labelPrivacy">Публичная поездка (видна по ссылке)</span>
+</div>
+
 <div class="notif-setting">
   <span id="labelRemind">Напомнить за</span>
   <select id="notifDays">
@@ -439,6 +508,8 @@ header h1 { font-size:2rem; }
 
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 (function() {
@@ -495,7 +566,16 @@ header h1 { font-size:2rem; }
       storyClose: "Закрыть",
       storyDownload: "Скачать",
       storyShare: "Поделиться",
-      storyRoute: "Маршрут"
+      storyRoute: "Маршрут",
+      shareTrips: "Поделиться поездками",
+      publicTrip: "Публичная поездка (видна по ссылке)",
+      privateLabel: "приватная",
+      publicLabel: "публичная",
+      linkCopied: "Ссылка скопирована!",
+      noPublicTrips: "Нет публичных поездок для расшаривания",
+      sharedView: "Поездки пользователя",
+      sharedSubtitle: "Просмотр публичных поездок",
+      openOwn: "Открыть свой Trippa"
     },
     en: {
       tagline: "Plan \u00b7 Share \u00b7 Travel",
@@ -540,7 +620,16 @@ header h1 { font-size:2rem; }
       storyClose: "Close",
       storyDownload: "Download",
       storyShare: "Share",
-      storyRoute: "Route"
+      storyRoute: "Route",
+      shareTrips: "Share trips",
+      publicTrip: "Public trip (visible via link)",
+      privateLabel: "private",
+      publicLabel: "public",
+      linkCopied: "Link copied!",
+      noPublicTrips: "No public trips to share",
+      sharedView: "User's trips",
+      sharedSubtitle: "Viewing public trips",
+      openOwn: "Open your Trippa"
     }
   };
 
@@ -600,6 +689,9 @@ header h1 { font-size:2rem; }
     document.getElementById("addCityBtn").textContent = t("addCity");
     document.getElementById("cancelBtn").textContent = t("cancel");
     document.getElementById("saveBtn").textContent = t("save");
+    document.getElementById("labelPrivacy").textContent = t("publicTrip");
+    var shareBtnText = document.getElementById("shareBtnText");
+    if (shareBtnText) shareBtnText.textContent = t("shareTrips");
     document.getElementById("tripName").placeholder = t("namePlaceholder");
     // Select options
     document.getElementById("optVacation").textContent = t("vacation");
@@ -789,10 +881,12 @@ header h1 { font-size:2rem; }
 
     var typeLabel = t(tr.type);
 
+    var privBadge = tr.isPublic ? '<span class="privacy-badge">\uD83C\uDF10 ' + esc(t("publicLabel")) + '</span>' : '';
+
     return '<div class="trip-card type-' + esc(tr.type) + '">' +
       '<button class="story-btn" data-story="' + esc(tr.id) + '" title="Instagram Story"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>' +
       '<button class="delete-btn" data-del="' + esc(tr.id) + '">\u2715</button>' +
-      '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' +
+      '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' + privBadge +
       '<div class="trip-name">' + esc(tr.name) + '</div>' +
       '<div class="cities">' + ci + '</div>' +
       (cd ? '<div class="countdown">' + cd + '</div>' : '') +
@@ -1071,12 +1165,14 @@ header h1 { font-size:2rem; }
         document.getElementById("tripType").value = tr.type;
         document.getElementById("tripName").value = tr.name;
         document.getElementById("notifDays").value = tr.notifDays || 1;
+        document.getElementById("tripPublic").checked = !!tr.isPublic;
         for (var j = 0; j < tr.cities.length; j++) addCityRow(tr.cities[j].name, tr.cities[j].dateFrom, tr.cities[j].dateTo);
       }
     } else {
       document.getElementById("tripType").value = "vacation";
       document.getElementById("tripName").value = "";
       document.getElementById("notifDays").value = "1";
+      document.getElementById("tripPublic").checked = false;
       addCityRow("", "", "");
     }
     document.getElementById("modalOverlay").classList.add("open");
@@ -1141,6 +1237,7 @@ header h1 { font-size:2rem; }
     var name = document.getElementById("tripName").value.trim();
     var type = document.getElementById("tripType").value;
     var nd = parseInt(document.getElementById("notifDays").value, 10);
+    var isPublic = document.getElementById("tripPublic").checked;
     if (!name) { document.getElementById("tripName").focus(); return; }
 
     var rows = document.querySelectorAll("#citiesContainer .city-input-row");
@@ -1160,13 +1257,154 @@ header h1 { font-size:2rem; }
         if (trips[i].id === editingId) {
           trips[i].name = name; trips[i].type = type;
           trips[i].cities = cities; trips[i].notifDays = nd;
+          trips[i].isPublic = isPublic;
           break;
         }
       }
     } else {
-      trips.push({ id: genId(), name: name, type: type, cities: cities, notifDays: nd });
+      trips.push({ id: genId(), name: name, type: type, cities: cities, notifDays: nd, isPublic: isPublic });
     }
     persist(); closeModal(); render();
+  }
+
+  // ====== Sharing ======
+  function showToast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(function() { el.classList.remove("show"); }, 2500);
+  }
+
+  function generateShareLink() {
+    var publicTrips = [];
+    for (var i = 0; i < trips.length; i++) {
+      if (trips[i].isPublic) {
+        publicTrips.push({
+          name: trips[i].name,
+          type: trips[i].type,
+          cities: trips[i].cities
+        });
+      }
+    }
+    if (!publicTrips.length) {
+      showToast(t("noPublicTrips"));
+      return;
+    }
+    var data = JSON.stringify(publicTrips);
+    var encoded = btoa(unescape(encodeURIComponent(data)));
+    var url = location.origin + location.pathname + "#shared=" + encoded;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function() {
+        showToast(t("linkCopied"));
+      }).catch(function() {
+        prompt(t("linkCopied"), url);
+      });
+    } else {
+      prompt(t("linkCopied"), url);
+    }
+  }
+
+  // Shared view mode
+  var isSharedView = false;
+  var sharedTrips = [];
+
+  function checkSharedView() {
+    var hash = location.hash;
+    if (hash.indexOf("#shared=") !== 0) return false;
+    var encoded = hash.substring(8);
+    try {
+      var json = decodeURIComponent(escape(atob(encoded)));
+      sharedTrips = JSON.parse(json);
+      if (!Array.isArray(sharedTrips)) return false;
+      isSharedView = true;
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function renderSharedView() {
+    // Hide controls not needed in shared view
+    document.getElementById("addBtn").style.display = "none";
+    document.getElementById("shareBtn").style.display = "none";
+    document.getElementById("notifBanner").style.display = "none";
+
+    // Add shared banner
+    var container = document.querySelector(".container");
+    var banner = document.createElement("div");
+    banner.className = "shared-banner";
+    banner.innerHTML = '<div class="shared-title">' + esc(t("sharedView")) + '</div>' +
+      '<div class="shared-subtitle">' + esc(t("sharedSubtitle")) + '</div>' +
+      '<a class="own-link" href="' + location.origin + location.pathname + '">' + esc(t("openOwn")) + '</a>';
+    container.insertBefore(banner, document.getElementById("upcomingSection"));
+
+    // Render shared trips
+    var today = new Date(); today.setHours(0,0,0,0);
+    var up = [], arch = [];
+
+    for (var i = 0; i < sharedTrips.length; i++) {
+      var tr = sharedTrips[i];
+      if (!tr.cities || !tr.cities.length) { arch.push(tr); continue; }
+      var last = new Date(tr.cities[tr.cities.length - 1].dateTo + "T00:00:00");
+      if (last < today) arch.push(tr); else up.push(tr);
+    }
+
+    up.sort(function(a, b) {
+      return new Date(a.cities[0].dateFrom + "T00:00:00") - new Date(b.cities[0].dateFrom + "T00:00:00");
+    });
+
+    var upEl = document.getElementById("upcomingList");
+    if (up.length === 0) {
+      upEl.innerHTML = '<div class="empty-state"><div class="icon">&#128506;</div>' + esc(t("noTrips")) + '</div>';
+    } else {
+      var h = "";
+      for (var i = 0; i < up.length; i++) h += sharedCard(up[i], today);
+      upEl.innerHTML = h;
+    }
+
+    var archSec = document.getElementById("archiveSection");
+    var archEl = document.getElementById("archiveList");
+    if (arch.length > 0) {
+      archSec.style.display = "";
+      var h2 = "";
+      for (var i = 0; i < arch.length; i++) h2 += sharedCard(arch[i], today);
+      archEl.innerHTML = h2;
+    } else {
+      archSec.style.display = "none";
+    }
+  }
+
+  function sharedCard(tr, today) {
+    var cd = "";
+    if (tr.cities && tr.cities.length) {
+      var first = new Date(tr.cities[0].dateFrom + "T00:00:00");
+      var last = new Date(tr.cities[tr.cities.length-1].dateTo + "T00:00:00");
+      if (today >= first && today <= last) {
+        cd = '<span class="active-label">' + esc(t("traveling")) + '</span>';
+      } else {
+        var diff = Math.ceil((first - today) / 86400000);
+        if (diff === 0) cd = '<span class="active-label">' + esc(t("departToday")) + '</span>';
+        else if (diff > 0) cd = esc(t("inPrefix")) + ' <span class="days-num">' + diff + '</span> ' + esc(pluralDays(diff));
+      }
+    }
+
+    var ci = "";
+    for (var j = 0; j < (tr.cities||[]).length; j++) {
+      var c = tr.cities[j];
+      ci += '<div class="city-row"><span class="dot"></span><span class="city-name">' +
+        esc(c.name) + '</span><span class="city-dates">' +
+        fmtDate(c.dateFrom) + ' \u2014 ' + fmtDate(c.dateTo) + '</span></div>';
+    }
+
+    var typeLabel = t(tr.type);
+
+    return '<div class="trip-card type-' + esc(tr.type) + '">' +
+      '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' +
+      '<div class="trip-name">' + esc(tr.name) + '</div>' +
+      '<div class="cities">' + ci + '</div>' +
+      (cd ? '<div class="countdown">' + cd + '</div>' : '') +
+      '</div>';
   }
 
   // Event bindings
@@ -1187,6 +1425,9 @@ header h1 { font-size:2rem; }
     if (e.target === this) closeStoryOverlay();
   });
 
+  // Share button
+  document.getElementById("shareBtn").addEventListener("click", generateShareLink);
+
   // Language toggle
   document.getElementById("langToggle").addEventListener("click", function(e) {
     var btn = e.target;
@@ -1196,12 +1437,17 @@ header h1 { font-size:2rem; }
   });
 
   // Init
-  registerSW();
-  applyLang();
-  updateBanner();
-  render();
-  try { checkNotif(); } catch(e) {}
-  try { setInterval(checkNotif, 21600000); } catch(e) {}
+  if (checkSharedView()) {
+    applyLang();
+    renderSharedView();
+  } else {
+    registerSW();
+    applyLang();
+    updateBanner();
+    render();
+    try { checkNotif(); } catch(e) {}
+    try { setInterval(checkNotif, 21600000); } catch(e) {}
+  }
 
 })();
 </script>
