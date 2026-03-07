@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Trippa Telegram Bot — manage travel plans from Telegram."""
 
+import calendar
 import logging
 from datetime import datetime, date
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    BotCommand,
+    MenuButtonCommands,
+)
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -38,8 +45,19 @@ TYPE_LABELS = {
     "other": "Другое",
 }
 
+POPULAR_CITIES = [
+    "Москва", "Санкт-Петербург", "Стамбул", "Париж",
+    "Рим", "Барселона", "Дубай", "Бангкок",
+    "Тбилиси", "Ереван", "Бали", "Лондон",
+]
+
+MONTH_NAMES_RU = [
+    "", "Янв", "Фев", "Мар", "Апр", "Май", "Июн",
+    "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек",
+]
+
 # Conversation states
-NAME, TYPE, CITY_NAME, CITY_FROM, CITY_TO, MORE_CITIES = range(6)
+NAME, TYPE, CITY_PICK, CITY_NAME, CITY_FROM, CITY_TO, MORE_CITIES = range(7)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
@@ -97,6 +115,51 @@ def _escape(text: str) -> str:
     return "".join(result)
 
 
+# ── Calendar helpers ─────────────────────────────────────────────────────
+
+def build_month_keyboard(year: int, month: int, prefix: str) -> InlineKeyboardMarkup:
+    """Build an inline calendar for a given month."""
+    rows = []
+    # Header: < Month Year >
+    rows.append([
+        InlineKeyboardButton("◀", callback_data=f"{prefix}:prev:{year}:{month}"),
+        InlineKeyboardButton(f"{MONTH_NAMES_RU[month]} {year}", callback_data="noop"),
+        InlineKeyboardButton("▶", callback_data=f"{prefix}:next:{year}:{month}"),
+    ])
+    # Weekday headers
+    rows.append([
+        InlineKeyboardButton(d, callback_data="noop")
+        for d in ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+    ])
+    # Day grid
+    cal = calendar.monthcalendar(year, month)
+    for week in cal:
+        row = []
+        for day in week:
+            if day == 0:
+                row.append(InlineKeyboardButton(" ", callback_data="noop"))
+            else:
+                row.append(InlineKeyboardButton(
+                    str(day),
+                    callback_data=f"{prefix}:day:{year}:{month}:{day}",
+                ))
+        rows.append(row)
+
+    return InlineKeyboardMarkup(rows)
+
+
+def shift_month(year: int, month: int, direction: int):
+    """Shift month by +1 or -1, returning (year, month)."""
+    month += direction
+    if month > 12:
+        month = 1
+        year += 1
+    elif month < 1:
+        month = 12
+        year -= 1
+    return year, month
+
+
 # ── Command Handlers ─────────────────────────────────────────────────────
 
 async def cmd_start(update: Update, context) -> None:
@@ -121,7 +184,8 @@ async def cmd_help(update: Update, context) -> None:
         "1\\. Название\n"
         "2\\. Тип \\(отпуск, командировка\\.\\.\\.\\)\n"
         "3\\. Города с датами\n\n"
-        "Даты вводите в формате *ДД\\.ММ\\.ГГГГ* или *ГГГГ\\-ММ\\-ДД*",
+        "Город можно выбрать из списка или ввести вручную\\.\n"
+        "Даты выбираются через удобный календарь 📅",
         parse_mode="MarkdownV2",
     )
 
@@ -208,17 +272,54 @@ async def new_type(update: Update, context) -> int:
     context.user_data["new_trip"]["type"] = trip_type
     label = TYPE_LABELS.get(trip_type, trip_type)
     await query.edit_message_text(f"Тип: {EMOJI.get(trip_type, '')} {label}")
-    await query.message.reply_text("🏙 Введите название города:")
-    return CITY_NAME
+    await _send_city_picker(query.message, context)
+    return CITY_PICK
+
+
+async def _send_city_picker(message, context) -> None:
+    """Send popular cities keyboard."""
+    rows = []
+    for i in range(0, len(POPULAR_CITIES), 3):
+        row = [
+            InlineKeyboardButton(city, callback_data=f"city:{city}")
+            for city in POPULAR_CITIES[i:i + 3]
+        ]
+        rows.append(row)
+    rows.append([InlineKeyboardButton("✍️ Ввести вручную", callback_data="city:__custom__")])
+    await message.reply_text(
+        "🏙 Выберите город или введите вручную:",
+        reply_markup=InlineKeyboardMarkup(rows),
+    )
+
+
+async def new_city_pick(update: Update, context) -> int:
+    """Handle city selection from popular list."""
+    query = update.callback_query
+    await query.answer()
+    city_name = query.data.split(":", 1)[1]
+
+    if city_name == "__custom__":
+        await query.edit_message_text("🏙 Введите название города:")
+        return CITY_NAME
+
+    context.user_data["current_city"] = {"name": city_name}
+    await query.edit_message_text(f"🏙 Город: {city_name}")
+    await _send_calendar(query.message, context, "from", "📅 Дата заезда:")
+    return CITY_FROM
 
 
 async def new_city_name(update: Update, context) -> int:
     city = {"name": update.message.text.strip()}
     context.user_data["current_city"] = city
-    await update.message.reply_text(
-        "📅 Дата заезда (ДД.ММ.ГГГГ или ГГГГ-ММ-ДД):"
-    )
+    await _send_calendar(update.message, context, "from", "📅 Дата заезда:")
     return CITY_FROM
+
+
+async def _send_calendar(message, context, prefix: str, text: str) -> None:
+    """Send calendar for date selection starting from current month."""
+    today = date.today()
+    kb = build_month_keyboard(today.year, today.month, prefix)
+    await message.reply_text(text, reply_markup=kb)
 
 
 def parse_date(text: str) -> str | None:
@@ -232,17 +333,79 @@ def parse_date(text: str) -> str | None:
     return None
 
 
+async def cal_from_callback(update: Update, context) -> int:
+    """Handle calendar navigation and day selection for dateFrom."""
+    query = update.callback_query
+    await query.answer()
+    parts = query.data.split(":")
+
+    action = parts[1]
+    if action == "noop":
+        return CITY_FROM
+
+    if action in ("prev", "next"):
+        year, month = int(parts[2]), int(parts[3])
+        year, month = shift_month(year, month, -1 if action == "prev" else 1)
+        kb = build_month_keyboard(year, month, "from")
+        await query.edit_message_reply_markup(reply_markup=kb)
+        return CITY_FROM
+
+    if action == "day":
+        year, month, day = int(parts[2]), int(parts[3]), int(parts[4])
+        ds = f"{year}-{month:02d}-{day:02d}"
+        context.user_data["current_city"]["dateFrom"] = ds
+        d = date(year, month, day)
+        await query.edit_message_text(f"📅 Заезд: {d.strftime('%d.%m.%Y')}")
+        await _send_calendar(query.message, context, "to", "📅 Дата выезда:")
+        return CITY_TO
+
+    return CITY_FROM
+
+
 async def new_city_from(update: Update, context) -> int:
+    """Handle manual text date input for dateFrom."""
     ds = parse_date(update.message.text)
     if not ds:
         await update.message.reply_text("❌ Неверный формат даты. Попробуйте ДД.ММ.ГГГГ:")
         return CITY_FROM
     context.user_data["current_city"]["dateFrom"] = ds
-    await update.message.reply_text("📅 Дата выезда (ДД.ММ.ГГГГ или ГГГГ-ММ-ДД):")
+    await _send_calendar(update.message, context, "to", "📅 Дата выезда:")
+    return CITY_TO
+
+
+async def cal_to_callback(update: Update, context) -> int:
+    """Handle calendar navigation and day selection for dateTo."""
+    query = update.callback_query
+    await query.answer()
+    parts = query.data.split(":")
+
+    action = parts[1]
+    if action == "noop":
+        return CITY_TO
+
+    if action in ("prev", "next"):
+        year, month = int(parts[2]), int(parts[3])
+        year, month = shift_month(year, month, -1 if action == "prev" else 1)
+        kb = build_month_keyboard(year, month, "to")
+        await query.edit_message_reply_markup(reply_markup=kb)
+        return CITY_TO
+
+    if action == "day":
+        year, month, day = int(parts[2]), int(parts[3]), int(parts[4])
+        ds = f"{year}-{month:02d}-{day:02d}"
+        city = context.user_data["current_city"]
+        city["dateTo"] = ds
+        context.user_data["new_trip"]["cities"].append(city)
+
+        d = date(year, month, day)
+        await query.edit_message_text(f"📅 Выезд: {d.strftime('%d.%m.%Y')}")
+        return await _ask_more_cities(query.message, context)
+
     return CITY_TO
 
 
 async def new_city_to(update: Update, context) -> int:
+    """Handle manual text date input for dateTo."""
     ds = parse_date(update.message.text)
     if not ds:
         await update.message.reply_text("❌ Неверный формат даты. Попробуйте ДД.ММ.ГГГГ:")
@@ -251,7 +414,11 @@ async def new_city_to(update: Update, context) -> int:
     city = context.user_data["current_city"]
     city["dateTo"] = ds
     context.user_data["new_trip"]["cities"].append(city)
+    return await _ask_more_cities(update.message, context)
 
+
+async def _ask_more_cities(message, context) -> int:
+    """Ask if user wants to add more cities."""
     keyboard = [
         [
             InlineKeyboardButton("➕ Добавить ещё город", callback_data="more:yes"),
@@ -260,7 +427,7 @@ async def new_city_to(update: Update, context) -> int:
     ]
     cities = context.user_data["new_trip"]["cities"]
     route = " → ".join(c["name"] for c in cities)
-    await update.message.reply_text(
+    await message.reply_text(
         f"Маршрут: {route}\n\nДобавить ещё город?",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
@@ -274,8 +441,8 @@ async def new_more_cities(update: Update, context) -> int:
 
     if choice == "yes":
         await query.edit_message_text(query.message.text)
-        await query.message.reply_text("🏙 Введите название города:")
-        return CITY_NAME
+        await _send_city_picker(query.message, context)
+        return CITY_PICK
 
     # Save trip
     data = context.user_data["new_trip"]
@@ -337,6 +504,21 @@ async def delete_callback(update: Update, context) -> None:
         await query.edit_message_text("Поездка не найдена.")
 
 
+# ── Post-init: set commands & menu button ────────────────────────────────
+
+async def post_init(application) -> None:
+    """Set bot commands and menu button after startup."""
+    commands = [
+        BotCommand("new", "Новая поездка"),
+        BotCommand("trips", "Мои поездки"),
+        BotCommand("delete", "Удалить поездку"),
+        BotCommand("help", "Справка"),
+    ]
+    await application.bot.set_my_commands(commands)
+    await application.bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+    logger.info("Bot commands and menu button configured.")
+
+
 # ── Main ─────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -344,7 +526,7 @@ def main() -> None:
         logger.error("TRIPPA_BOT_TOKEN environment variable is not set!")
         raise SystemExit(1)
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
     # Conversation for creating new trip
     conv_handler = ConversationHandler(
@@ -352,12 +534,20 @@ def main() -> None:
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_name)],
             TYPE: [CallbackQueryHandler(new_type, pattern=r"^type:")],
+            CITY_PICK: [CallbackQueryHandler(new_city_pick, pattern=r"^city:")],
             CITY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_name)],
-            CITY_FROM: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_from)],
-            CITY_TO: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_to)],
+            CITY_FROM: [
+                CallbackQueryHandler(cal_from_callback, pattern=r"^from:"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_from),
+            ],
+            CITY_TO: [
+                CallbackQueryHandler(cal_to_callback, pattern=r"^to:"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, new_city_to),
+            ],
             MORE_CITIES: [CallbackQueryHandler(new_more_cities, pattern=r"^more:")],
         },
         fallbacks=[CommandHandler("cancel", new_cancel)],
+        per_message=False,
     )
 
     app.add_handler(conv_handler)
