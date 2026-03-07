@@ -67,19 +67,20 @@ def fmt_date(ds: str) -> str:
         return ""
     try:
         d = datetime.strptime(ds, "%Y-%m-%d")
-        return _escape(d.strftime("%d.%m.%y"))
+        return d.strftime("%d.%m.%y")
     except ValueError:
-        return _escape(ds)
+        return ds
 
 
 def fmt_trip(tr: dict) -> str:
     emoji = EMOJI.get(tr["type"], "")
     label = TYPE_LABELS.get(tr["type"], tr["type"])
-    lines = [f"{emoji} *{_escape(tr['name'])}*  _{_escape(label)}_"]
+    name = _html(tr["name"])
+    lines = [f"{emoji} <b>{name}</b>  <i>{_html(label)}</i>"]
 
     for c in tr.get("cities", []):
         lines.append(
-            f"  • {_escape(c['name'])}  {fmt_date(c['dateFrom'])} — {fmt_date(c['dateTo'])}"
+            f"  • {_html(c['name'])}  {fmt_date(c['dateFrom'])} — {fmt_date(c['dateTo'])}"
         )
 
     cities = tr.get("cities", [])
@@ -91,28 +92,21 @@ def fmt_trip(tr: dict) -> str:
             last = datetime.strptime(last_date, "%Y-%m-%d").date()
             today = date.today()
             if today > last:
-                lines.append("  📦 _В архиве_")
+                lines.append("  📦 <i>В архиве</i>")
             elif today >= first:
-                lines.append("  ✈️ _Сейчас в поездке\\!_")
+                lines.append("  ✈️ <i>Сейчас в поездке!</i>")
             else:
                 diff = (first - today).days
-                lines.append(f"  ⏳ _Через {diff} дн\\._")
+                lines.append(f"  ⏳ <i>Через {diff} дн.</i>")
         except ValueError:
             pass
 
     return "\n".join(lines)
 
 
-def _escape(text: str) -> str:
-    """Escape MarkdownV2 special characters."""
-    special = r"_*[]()~`>#+-=|{}.!"
-    result = []
-    for ch in text:
-        if ch in special:
-            result.append(f"\\{ch}")
-        else:
-            result.append(ch)
-    return "".join(result)
+def _html(text: str) -> str:
+    """Escape HTML special characters."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 # ── Calendar helpers ─────────────────────────────────────────────────────
@@ -164,29 +158,29 @@ def shift_month(year: int, month: int, direction: int):
 
 async def cmd_start(update: Update, context) -> None:
     await update.message.reply_text(
-        "🌍 *Trippa* — бот для планирования поездок\\!\n\n"
+        "🌍 <b>Trippa</b> — бот для планирования поездок!\n\n"
         "Команды:\n"
         "/new — новая поездка\n"
         "/trips — список поездок\n"
         "/delete — удалить поездку\n"
         "/help — справка",
-        parse_mode="MarkdownV2",
+        parse_mode="HTML",
     )
 
 
 async def cmd_help(update: Update, context) -> None:
     await update.message.reply_text(
-        "📖 *Как пользоваться Trippa Bot*\n\n"
+        "📖 <b>Как пользоваться Trippa Bot</b>\n\n"
         "/new — создать поездку пошагово\n"
         "/trips — показать все поездки\n"
         "/delete — удалить поездку\n\n"
         "При создании поездки бот спросит:\n"
-        "1\\. Название\n"
-        "2\\. Тип \\(отпуск, командировка\\.\\.\\.\\)\n"
-        "3\\. Города с датами\n\n"
-        "Город можно выбрать из списка или ввести вручную\\.\n"
+        "1. Название\n"
+        "2. Тип (отпуск, командировка...)\n"
+        "3. Города с датами\n\n"
+        "Город можно выбрать из списка или ввести вручную.\n"
         "Даты выбираются через удобный календарь 📅",
-        parse_mode="MarkdownV2",
+        parse_mode="HTML",
     )
 
 
@@ -221,18 +215,18 @@ async def cmd_trips(update: Update, context) -> None:
 
     parts = []
     if upcoming:
-        parts.append("📋 *Предстоящие:*\n")
+        parts.append("📋 <b>Предстоящие:</b>\n")
         for tr in upcoming:
             parts.append(fmt_trip(tr))
             parts.append("")
 
     if archive:
-        parts.append("📦 *Архив:*\n")
+        parts.append("📦 <b>Архив:</b>\n")
         for tr in archive:
             parts.append(fmt_trip(tr))
             parts.append("")
 
-    await update.message.reply_text("\n".join(parts), parse_mode="MarkdownV2")
+    await update.message.reply_text("\n".join(parts), parse_mode="HTML")
 
 
 # ── New Trip Conversation ────────────────────────────────────────────────
@@ -456,8 +450,8 @@ async def new_more_cities(update: Update, context) -> int:
 
     await query.edit_message_text(query.message.text)
     await query.message.reply_text(
-        f"✅ Поездка сохранена\\!\n\n{fmt_trip(trip)}",
-        parse_mode="MarkdownV2",
+        f"✅ Поездка сохранена!\n\n{fmt_trip(trip)}",
+        parse_mode="HTML",
     )
     context.user_data.pop("new_trip", None)
     context.user_data.pop("current_city", None)
