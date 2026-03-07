@@ -529,6 +529,30 @@ async def fallback_start(update: Update, context) -> int:
     return ConversationHandler.END
 
 
+async def fallback_help(update: Update, context) -> int:
+    """Handle /help while inside the conversation — reset and show help."""
+    context.user_data.pop("new_trip", None)
+    context.user_data.pop("current_city", None)
+    await cmd_help(update, context)
+    return ConversationHandler.END
+
+
+async def fallback_trips(update: Update, context) -> int:
+    """Handle /trips while inside the conversation — reset and show trips."""
+    context.user_data.pop("new_trip", None)
+    context.user_data.pop("current_city", None)
+    await cmd_trips(update, context)
+    return ConversationHandler.END
+
+
+async def fallback_delete(update: Update, context) -> int:
+    """Handle /delete while inside the conversation — reset and show delete."""
+    context.user_data.pop("new_trip", None)
+    context.user_data.pop("current_city", None)
+    await cmd_delete(update, context)
+    return ConversationHandler.END
+
+
 # ── Delete Trip ──────────────────────────────────────────────────────────
 
 async def cmd_delete(update: Update, context) -> None:
@@ -612,8 +636,14 @@ def main() -> None:
         },
         fallbacks=[
             CommandHandler("start", fallback_start),
+            CommandHandler("help", fallback_help),
+            CommandHandler("trips", fallback_trips),
+            CommandHandler("delete", fallback_delete),
             CommandHandler("cancel", new_cancel),
             MessageHandler(filters.Text([BTN_CANCEL]), new_cancel),
+            MessageHandler(filters.Text([BTN_TRIPS]), fallback_trips),
+            MessageHandler(filters.Text([BTN_DELETE]), fallback_delete),
+            MessageHandler(filters.Text([BTN_HELP]), fallback_help),
         ],
         per_message=False,
     )
