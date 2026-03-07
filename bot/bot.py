@@ -66,6 +66,9 @@ BTN_DELETE = "🗑 Удалить"
 BTN_HELP = "❓ Помощь"
 BTN_CANCEL = "❌ Отмена"
 
+# All menu button texts — used to exclude them from free-text input states
+MENU_BUTTONS = [BTN_NEW, BTN_TRIPS, BTN_DELETE, BTN_HELP, BTN_CANCEL]
+
 # Conversation states
 NAME, TYPE, CITY_PICK, CITY_NAME, CITY_FROM, CITY_TO, MORE_CITIES = range(7)
 
@@ -620,17 +623,17 @@ def main() -> None:
             MessageHandler(filters.Text([BTN_NEW]), new_start),
         ],
         states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_name)],
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text(MENU_BUTTONS), new_name)],
             TYPE: [CallbackQueryHandler(new_type, pattern=r"^type:")],
             CITY_PICK: [CallbackQueryHandler(new_city_pick, pattern=r"^city:")],
-            CITY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_city_name)],
+            CITY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text(MENU_BUTTONS), new_city_name)],
             CITY_FROM: [
                 CallbackQueryHandler(cal_from_callback, pattern=r"^from:"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_city_from),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text(MENU_BUTTONS), new_city_from),
             ],
             CITY_TO: [
                 CallbackQueryHandler(cal_to_callback, pattern=r"^to:"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text([BTN_CANCEL]), new_city_to),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text(MENU_BUTTONS), new_city_to),
             ],
             MORE_CITIES: [CallbackQueryHandler(new_more_cities, pattern=r"^more:")],
         },
