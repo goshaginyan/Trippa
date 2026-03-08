@@ -14,6 +14,19 @@ def _user_file(user_id: int) -> str:
     return os.path.join(DATA_DIR, f"{user_id}.json")
 
 
+def all_user_ids() -> list[int]:
+    """Return list of all user IDs that have data files."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    ids = []
+    for name in os.listdir(DATA_DIR):
+        if name.endswith(".json"):
+            try:
+                ids.append(int(name[:-5]))
+            except ValueError:
+                pass
+    return ids
+
+
 def load_trips(user_id: int) -> list[dict]:
     path = _user_file(user_id)
     if not os.path.exists(path):

@@ -4,7 +4,7 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, date
+from datetime import datetime, date, time as dt_time, timezone, timedelta
 
 from aiohttp import web
 from telegram import (
@@ -1160,6 +1160,48 @@ async def cancel_standalone(update: Update, context) -> None:
     await update.message.reply_text("↩️ Отменено.", reply_markup=main_keyboard())
 
 
+# ── Reminders ─────────────────────────────────────────────────────────────
+
+MSK = timezone(timedelta(hours=3))
+REMIND_TIME = dt_time(hour=22, minute=0, tzinfo=MSK)  # 22:00 MSK
+REMIND_DAYS = (7, 1)  # за неделю и за день
+
+
+async def send_reminders(context) -> None:
+    """Daily job: check all users' trips and send reminders."""
+    bot = context.bot
+    today = date.today()
+
+    for user_id in storage.all_user_ids():
+        trips = storage.load_trips(user_id)
+        for tr in trips:
+            cities = tr.get("cities", [])
+            if not cities:
+                continue
+            try:
+                first = datetime.strptime(cities[0]["dateFrom"], "%Y-%m-%d").date()
+            except (ValueError, KeyError):
+                continue
+
+            diff = (first - today).days
+            if diff not in REMIND_DAYS:
+                continue
+
+            emoji = EMOJI.get(tr["type"], "")
+            name = _html(tr["name"])
+            route = " → ".join(_html(c["name"]) for c in cities)
+
+            if diff == 7:
+                text = f"🔔 Через неделю: {emoji} <b>{name}</b>\n📍 {route}"
+            else:
+                text = f"🔔 Завтра: {emoji} <b>{name}</b>\n📍 {route}"
+
+            try:
+                await bot.send_message(user_id, text, parse_mode="HTML")
+            except Exception:
+                logger.warning("Failed to send reminder to user %d", user_id)
+
+
 # ── Post-init: set commands & menu button ────────────────────────────────
 
 async def post_init(application) -> None:
@@ -1329,6 +1371,10 @@ async def run() -> None:
         await site.start()
         logger.info("Trippa bot is running...")
         logger.info("Web API listening on port %d", web_port)
+
+        # Schedule daily reminders at 22:00 MSK (19:00 UTC)
+        bot_app.job_queue.run_daily(send_reminders, time=REMIND_TIME)
+        logger.info("Reminders scheduled daily at %s", REMIND_TIME)
 
         await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
