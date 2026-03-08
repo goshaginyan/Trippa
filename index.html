@@ -165,77 +165,62 @@ font-family: Georgia, ‘Times New Roman’, serif;
 font-size:1.5rem; font-weight:400; margin-bottom:24px; color:var(--text);
 }
 
-/* FORM ELEMENTS — iOS Safari fix */
+/* FORM ELEMENTS */
 .form-group { margin-bottom:18px; }
 .form-group label {
-display:block; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em;
-color:var(--text-dim); margin-bottom:6px; font-weight:500;
+display:block; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em;
+color:var(--text-dim); margin-bottom:8px; font-weight:500;
 }
 
 input[type=”text”],
 input[type=”date”],
 select {
 display:block;
-width:100% !important;
+width:100%;
 min-width:0;
 max-width:100%;
 box-sizing:border-box;
-padding:12px 14px;
-background-color: var(--surface2) !important;
-background: var(--surface2) !important;
-border:1px solid var(--border) !important;
-border-radius:var(--radius-sm);
-color: var(--text) !important;
--webkit-text-fill-color: var(--text);
+padding:12px 16px;
+background:var(--bg);
+border:1px solid var(--border);
+border-radius:10px;
+color:var(--text);
+-webkit-text-fill-color:var(--text);
 font-family:inherit;
-font-size:16px;
+font-size:1rem;
 line-height:1.4;
 outline:none;
-transition:border-color 0.2s;
+transition:border-color 0.2s, box-shadow 0.2s;
 -webkit-appearance:none;
 -moz-appearance:none;
 appearance:none;
 opacity:1;
 }
-#tripName {
-display:block;
-width:100% !important;
-box-sizing:border-box;
-font-size:16px;
-padding:10px 12px;
-}
 input[type=”text”]::placeholder,
 input[type=”date”]::placeholder {
-color: var(--text-dim);
--webkit-text-fill-color: var(--text-dim);
-opacity:1;
+color:var(--text-dim); -webkit-text-fill-color:var(--text-dim); opacity:0.5;
 }
-input[type=”text”]::-webkit-input-placeholder {
-color: var(--text-dim);
--webkit-text-fill-color: var(--text-dim);
-opacity:1;
-}
-input[type=“text”]:focus,
-input[type=“date”]:focus,
+input[type=”text”]:focus,
+input[type=”date”]:focus,
 select:focus {
 border-color:var(--accent);
+box-shadow:0 0 0 3px var(--accent-glow);
 }
 
 /* Custom select arrow */
 select {
-background-image: url(“data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘12’ viewBox=‘0 0 12 12’%3E%3Cpath fill=’%238b90a5’ d=‘M6 8L1 3h10z’/%3E%3C/svg%3E”);
-background-repeat: no-repeat;
-background-position: right 12px center;
-padding-right: 36px;
+background-image: url(“data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=’http://www.w3.org/2000/svg’ width=’12’ height=’12’ viewBox=’0 0 12 12’%3E%3Cpath fill=’%238b90a5’ d=’M6 8L1 3h10z’/%3E%3C/svg%3E”);
+background-repeat:no-repeat;
+background-position:right 12px center;
+padding-right:36px;
 cursor:pointer;
 }
 select option { background:var(--surface2); color:var(--text); }
 
-/* Date input placeholder color */
-input[type=“date”]::-webkit-datetime-edit { color:var(--text); }
-input[type=“date”]::-webkit-calendar-picker-indicator {
-filter: invert(0.7);
-cursor: pointer;
+/* Date input */
+input[type=”date”]::-webkit-datetime-edit { color:var(--text); }
+input[type=”date”]::-webkit-calendar-picker-indicator {
+filter:invert(0.7); cursor:pointer;
 }
 
 .cities-container { display:flex; flex-direction:column; gap:10px; }
@@ -244,12 +229,7 @@ display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:start;
 }
 .city-input-row .suggest-wrapper { grid-column:1/-1; }
 .city-input-row input {
-font-size:16px; padding:10px 12px;
-background-color: var(--surface2) !important;
-background: var(--surface2) !important;
-color: var(--text) !important;
--webkit-text-fill-color: var(--text);
-opacity:1;
+font-size:1rem; padding:10px 12px;
 }
 .remove-city-btn {
 background:none; border:none; color:var(--text-dim); font-size:1.2rem;
@@ -287,8 +267,8 @@ border:none; -webkit-appearance:none;
 .btn-save { background:var(--accent); color:var(--bg); }
 .btn-save:hover { filter:brightness(1.1); }
 .btn-save:active { filter:brightness(0.9); }
-.btn-cancel { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border) !important; }
-.btn-cancel:hover { border-color:var(--text-dim) !important; color:var(--text); }
+.btn-cancel { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border); }
+.btn-cancel:hover { border-color:var(--text-dim); color:var(--text); }
 
 /* NOTIF SETTING */
 .notif-setting {
