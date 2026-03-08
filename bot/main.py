@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Trippa Telegram Bot — manage travel plans from Telegram."""
 
+import asyncio
 import logging
+import os
 from datetime import datetime, date
 
+from aiohttp import web
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -15,6 +18,7 @@ from telegram import (
     MenuButtonCommands,
 )
 from telegram.ext import (
+    Application,
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
@@ -26,6 +30,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from datepicker import DatePicker
 import storage
+from web import create_app
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -1171,14 +1176,10 @@ async def post_init(application) -> None:
     logger.info("Bot commands and menu button configured.")
 
 
-# ── Main ─────────────────────────────────────────────────────────────────
+# ── Build bot application ────────────────────────────────────────────────
 
-def main() -> None:
-    if not BOT_TOKEN:
-        logger.error("TRIPPA_BOT_TOKEN environment variable is not set!")
-        raise SystemExit(1)
-
-    app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
+def _build_bot_app(token: str) -> Application:
+    app = ApplicationBuilder().token(token).post_init(post_init).build()
 
     # Filter for all menu buttons (used to exclude from text handlers)
     menu_btn_filter = filters.Text([BTN_CANCEL, BTN_LIST, BTN_EDIT, BTN_DELETE, BTN_HELP, BTN_NEW])
@@ -1305,8 +1306,48 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(delete_callback, pattern=r"^del:"))
     app.add_handler(CallbackQueryHandler(delete_confirm_callback, pattern=r"^delconfirm:"))
 
-    logger.info("Trippa bot is running...")
-    app.run_polling()
+    return app
+
+
+# ── Main ─────────────────────────────────────────────────────────────────
+
+async def run() -> None:
+    if not BOT_TOKEN:
+        raise SystemExit("TRIPPA_BOT_TOKEN is not set")
+
+    web_port = int(os.environ.get("PORT", os.environ.get("WEB_PORT", "8080")))
+
+    bot_app = _build_bot_app(BOT_TOKEN)
+
+    web_app = create_app(BOT_TOKEN)
+    runner = web.AppRunner(web_app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", web_port)
+
+    async with bot_app:
+        await bot_app.start()
+        await site.start()
+        logger.info("Trippa bot is running...")
+        logger.info("Web API listening on port %d", web_port)
+
+        await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+
+        stop_event = asyncio.Event()
+        try:
+            await stop_event.wait()
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await bot_app.updater.stop()
+            await bot_app.stop()
+            await runner.cleanup()
+
+
+def main() -> None:
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
 
 
 if __name__ == "__main__":
