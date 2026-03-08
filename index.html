@@ -350,9 +350,18 @@ z-index:3000; opacity:0; transition:all 0.3s ease; pointer-events:none;
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+/* EDIT BUTTON */
+.trip-card .edit-btn {
+position:absolute; top:16px; right:44px; background:none; border:none;
+color:var(--text-dim); font-size:1.1rem; cursor:pointer; opacity:0;
+transition:opacity 0.2s, color 0.2s; padding:4px;
+}
+.trip-card:hover .edit-btn { opacity:1; }
+.trip-card .edit-btn:hover { color:var(--accent); }
+
 /* STORY BUTTON */
 .trip-card .story-btn {
-position:absolute; top:16px; right:44px; background:none; border:none;
+position:absolute; top:16px; right:72px; background:none; border:none;
 color:var(--text-dim); font-size:1.3rem; cursor:pointer; opacity:0;
 transition:opacity 0.2s, color 0.2s; padding:4px;
 }
@@ -388,8 +397,9 @@ font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s; border:
 header h1 { font-size:2rem; }
 .city-input-row { grid-template-columns:1fr 1fr; gap:6px; }
 .remove-city-btn { grid-column:1/-1; text-align:right; padding:2px; }
-/* On mobile, show delete/story button always */
+/* On mobile, show action buttons always */
 .trip-card .delete-btn { opacity:0.6; }
+.trip-card .edit-btn { opacity:0.6; }
 .trip-card .story-btn { opacity:0.6; }
 }
 </style>
@@ -877,6 +887,7 @@ header h1 { font-size:2rem; }
 
     return '<div class="trip-card type-' + esc(tr.type) + '">' +
       '<button class="story-btn" data-story="' + esc(tr.id) + '" title="Instagram Story"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>' +
+      '<button class="edit-btn" data-edit="' + esc(tr.id) + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>' +
       '<button class="delete-btn" data-del="' + esc(tr.id) + '">\u2715</button>' +
       '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' + privBadge +
       '<div class="trip-name">' + esc(tr.name) + '</div>' +
@@ -900,6 +911,15 @@ header h1 { font-size:2rem; }
           }
         };
       })(btns[i]);
+    }
+    // Edit buttons
+    var eBtns = document.querySelectorAll("[data-edit]");
+    for (var i = 0; i < eBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          openModal(btn.getAttribute("data-edit"));
+        };
+      })(eBtns[i]);
     }
     // Story buttons
     var sBtns = document.querySelectorAll("[data-story]");
