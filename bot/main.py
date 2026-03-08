@@ -1182,7 +1182,10 @@ def main() -> None:
         states={
             TYPE: [CallbackQueryHandler(new_type, pattern=r"^type:")],
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~menu_btn_filter, new_name)],
-            CITY_PICK: [CallbackQueryHandler(new_city_pick, pattern=r"^city:")],
+            CITY_PICK: [
+                CallbackQueryHandler(new_city_pick, pattern=r"^city:"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~menu_btn_filter, new_city_name),
+            ],
             CITY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~menu_btn_filter, new_city_name)],
             CITY_FROM: [
                 CallbackQueryHandler(cal_from_callback, pattern=r"^from:"),
