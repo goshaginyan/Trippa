@@ -766,13 +766,25 @@ header h1 { font-size:2rem; }
     } catch(e) {}
   }
 
+  function mskHour() {
+    // Current hour in Moscow time (UTC+3)
+    var now = new Date();
+    var utcH = now.getUTCHours();
+    return (utcH + 3) % 24;
+  }
+
   function checkNotif() {
     try {
       if (!notifOk() || notifPerm() !== "granted") return;
+      // Only send at 22:xx MSK (allow 22:00–22:59 window)
+      if (mskHour() !== 22) return;
+
       var today = new Date(); today.setHours(0,0,0,0);
       var key = today.toISOString().split("T")[0];
       if (storeGet("trippa_notif") === key) return;
       storeSet("trippa_notif", key);
+
+      var REMIND_DAYS = [7, 1];
 
       // Use SW for notifications (required for iOS PWA)
       if (swReg && swReg.active) {
@@ -784,8 +796,8 @@ header h1 { font-size:2rem; }
           if (!tr.cities || !tr.cities.length) continue;
           var fd = new Date(tr.cities[0].dateFrom + "T00:00:00");
           var diff = Math.ceil((fd - today) / 86400000);
-          if (diff === (tr.notifDays || 1)) {
-            var msg = diff === 0 ? t("notifToday") : t("notifIn") + " " + diff + " " + pluralDays(diff);
+          if (REMIND_DAYS.indexOf(diff) >= 0) {
+            var msg = diff === 1 ? t("notifIn") + " 1 " + pluralDays(1) : t("notifIn") + " " + diff + " " + pluralDays(diff);
             var names = [];
             for (var j = 0; j < tr.cities.length; j++) names.push(tr.cities[j].name);
             new Notification((EMOJI[tr.type] || "") + " " + tr.name, { body: msg + " \u2014 " + names.join(" \u2192 ") });
@@ -1426,7 +1438,7 @@ header h1 { font-size:2rem; }
     updateBanner();
     render();
     try { checkNotif(); } catch(e) {}
-    try { setInterval(checkNotif, 21600000); } catch(e) {}
+    try { setInterval(checkNotif, 1800000); } catch(e) {}  // check every 30 min
   }
 
 })();
