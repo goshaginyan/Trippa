@@ -1,5 +1,5 @@
-"""Entry point for Pella.app — redirects to bot/bot.py."""
+"""Entry point — redirects to bot/main.py."""
 import subprocess
 import sys
 
-sys.exit(subprocess.call([sys.executable, "bot/bot.py"]))
+sys.exit(subprocess.call([sys.executable, "bot/main.py"]))

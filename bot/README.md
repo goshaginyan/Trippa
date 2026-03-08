@@ -26,7 +26,7 @@ Telegram-бот для управления поездками из мессен
 3. Задайте токен и запустите:
    ```bash
    export TRIPPA_BOT_TOKEN="your-token-here"
-   python bot.py
+   python main.py
    ```
 
 ## Переменные окружения

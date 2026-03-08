@@ -55,3 +55,13 @@ def delete_trip(user_id: int, trip_id: str) -> bool:
         return False
     save_trips(user_id, new_trips)
     return True
+
+
+def update_trip(user_id: int, trip_id: str, updates: dict) -> dict | None:
+    trips = load_trips(user_id)
+    for t in trips:
+        if t["id"] == trip_id:
+            t.update(updates)
+            save_trips(user_id, trips)
+            return t
+    return None
