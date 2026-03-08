@@ -259,6 +259,7 @@ async def cmd_list(update: Update, context) -> None:
 
 async def new_start(update: Update, context) -> int:
     context.user_data["new_trip"] = {"cities": []}
+    await update.message.reply_text("➕ Создание поездки", reply_markup=cancel_keyboard())
     keyboard = [
         [
             InlineKeyboardButton(f"{EMOJI['vacation']} Отпуск", callback_data="type:vacation"),
@@ -558,13 +559,14 @@ async def cmd_edit(update: Update, context) -> None:
             "У вас нет поездок.", reply_markup=main_keyboard(),
         )
         return
+    await update.message.reply_text("✏️ Редактирование", reply_markup=cancel_keyboard())
     keyboard = []
     for tr in trips:
         emoji = EMOJI.get(tr["type"], "")
         label = f"{emoji} {tr['name']}"
         keyboard.append([InlineKeyboardButton(label, callback_data=f"edit:{tr['id']}")])
     await update.message.reply_text(
-        "✏️ Выберите поездку для редактирования:",
+        "Выберите поездку:",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
@@ -1093,6 +1095,7 @@ async def cmd_delete(update: Update, context) -> None:
         )
         return
 
+    await update.message.reply_text("🗑 Удаление", reply_markup=cancel_keyboard())
     keyboard = []
     for tr in trips:
         emoji = EMOJI.get(tr["type"], "")
@@ -1100,7 +1103,7 @@ async def cmd_delete(update: Update, context) -> None:
         keyboard.append([InlineKeyboardButton(label, callback_data=f"del:{tr['id']}")])
 
     await update.message.reply_text(
-        "🗑 Какую поездку удалить?",
+        "Какую поездку удалить?",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
@@ -1143,6 +1146,13 @@ async def delete_confirm_callback(update: Update, context) -> None:
     else:
         context.user_data.pop("del_trip_id", None)
         await query.edit_message_text("↩️ Отменено.")
+
+
+# ── Standalone cancel (outside conversations) ────────────────────────────
+
+async def cancel_standalone(update: Update, context) -> None:
+    """Handle Cancel button press outside of any conversation."""
+    await update.message.reply_text("↩️ Отменено.", reply_markup=main_keyboard())
 
 
 # ── Post-init: set commands & menu button ────────────────────────────────
@@ -1286,6 +1296,10 @@ def main() -> None:
     app.add_handler(MessageHandler(filters.Text([BTN_EDIT]), cmd_edit))
     app.add_handler(MessageHandler(filters.Text([BTN_DELETE]), cmd_delete))
     app.add_handler(MessageHandler(filters.Text([BTN_HELP]), cmd_help))
+
+    # Standalone cancel (outside conversations)
+    app.add_handler(MessageHandler(filters.Text([BTN_CANCEL]), cancel_standalone))
+    app.add_handler(CommandHandler("cancel", cancel_standalone))
 
     # Inline callbacks for delete with confirmation
     app.add_handler(CallbackQueryHandler(delete_callback, pattern=r"^del:"))
