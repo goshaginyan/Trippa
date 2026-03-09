@@ -147,6 +147,12 @@ async def create_trip(request: web.Request) -> web.Response:
             raise web.HTTPBadRequest(text="Each city must have name, dateFrom, dateTo")
 
     trip = storage.add_trip(user_id, name, trip_type, cities, notif_days)
+
+    bot_app = request.app.get("bot_app")
+    if bot_app:
+        from main import schedule_creation_reminder
+        schedule_creation_reminder(bot_app, user_id, trip)
+
     return web.json_response(trip, status=201)
 
 
@@ -210,11 +216,13 @@ async def serve_miniapp(request: web.Request) -> web.FileResponse:
 
 # ── App factory ──────────────────────────────────────────────────────
 
-def create_app(bot_token: str) -> web.Application:
+def create_app(bot_token: str, bot_app=None) -> web.Application:
     app = web.Application(middlewares=[
         cors_middleware,
         _make_auth_middleware(bot_token),
     ])
+    if bot_app:
+        app["bot_app"] = bot_app
     app.router.add_get("/", serve_miniapp)
     app.router.add_get("/api/trips", list_trips)
     app.router.add_post("/api/trips", create_trip)

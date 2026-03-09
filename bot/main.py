@@ -484,6 +484,8 @@ async def new_more_cities(update: Update, context) -> int:
         cities=data["cities"],
     )
 
+    schedule_creation_reminder(context.application, user_id, trip)
+
     await query.edit_message_text(query.message.text)
     await query.message.reply_text(
         f"✅ Поездка сохранена!\n\n{fmt_trip(trip)}",
@@ -1165,6 +1167,35 @@ async def cancel_standalone(update: Update, context) -> None:
 MSK = timezone(timedelta(hours=3))
 REMIND_TIME = dt_time(hour=22, minute=0, tzinfo=MSK)  # 22:00 MSK
 REMIND_DAYS = (7, 1)  # за неделю и за день
+TEST_REMIND_DELAY = 60  # секунд после создания поездки (тест)
+
+
+async def _send_creation_reminder(context) -> None:
+    """One-shot job: send a test push 1 min after trip creation."""
+    data = context.job.data
+    user_id = data["user_id"]
+    trip = data["trip"]
+    emoji = EMOJI.get(trip["type"], "")
+    name = _html(trip["name"])
+    route = " → ".join(_html(c["name"]) for c in trip.get("cities", []))
+    text = f"🔔 Напоминание: {emoji} <b>{name}</b>\n📍 {route}"
+    try:
+        await context.bot.send_message(user_id, text, parse_mode="HTML")
+        logger.info("Sent creation reminder to %d: %s", user_id, trip["name"])
+    except Exception as e:
+        logger.warning("Failed creation reminder to %d: %s", user_id, e)
+
+
+def schedule_creation_reminder(app, user_id: int, trip: dict) -> None:
+    """Schedule a test reminder 1 min after trip creation."""
+    app.job_queue.run_once(
+        _send_creation_reminder,
+        when=TEST_REMIND_DELAY,
+        data={"user_id": user_id, "trip": trip},
+        name=f"creation_remind_{user_id}_{trip['id']}",
+    )
+    logger.info("Scheduled creation reminder for user %d, trip %s in %ds",
+                user_id, trip["id"], TEST_REMIND_DELAY)
 
 
 async def send_reminders(context) -> None:
@@ -1404,7 +1435,7 @@ async def run() -> None:
 
     bot_app = _build_bot_app(BOT_TOKEN)
 
-    web_app = create_app(BOT_TOKEN)
+    web_app = create_app(BOT_TOKEN, bot_app)
     runner = web.AppRunner(web_app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", web_port)
