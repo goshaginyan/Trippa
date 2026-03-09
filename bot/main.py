@@ -1170,9 +1170,12 @@ REMIND_DAYS = (7, 1)  # за неделю и за день
 async def send_reminders(context) -> None:
     """Daily job: check all users' trips and send reminders."""
     bot = context.bot
-    today = date.today()
+    # Use Moscow date, not server date
+    today = datetime.now(MSK).date()
+    user_ids = storage.all_user_ids()
+    logger.info("Reminder check: %s, users: %d", today, len(user_ids))
 
-    for user_id in storage.all_user_ids():
+    for user_id in user_ids:
         trips = storage.load_trips(user_id)
         for tr in trips:
             cities = tr.get("cities", [])
@@ -1198,8 +1201,45 @@ async def send_reminders(context) -> None:
 
             try:
                 await bot.send_message(user_id, text, parse_mode="HTML")
-            except Exception:
-                logger.warning("Failed to send reminder to user %d", user_id)
+                logger.info("Sent reminder to %d: %s (%d days)", user_id, tr["name"], diff)
+            except Exception as e:
+                logger.warning("Failed to send reminder to user %d: %s", user_id, e)
+
+
+async def cmd_test_remind(update: Update, context) -> None:
+    """Manually trigger reminder check for the calling user."""
+    await update.message.reply_text("🔄 Проверяю напоминания...")
+    today = datetime.now(MSK).date()
+    user_id = update.effective_user.id
+    trips = storage.load_trips(user_id)
+    sent = 0
+    for tr in trips:
+        cities = tr.get("cities", [])
+        if not cities:
+            continue
+        try:
+            first = datetime.strptime(cities[0]["dateFrom"], "%Y-%m-%d").date()
+        except (ValueError, KeyError):
+            continue
+        diff = (first - today).days
+        emoji = EMOJI.get(tr["type"], "")
+        name = _html(tr["name"])
+        route = " → ".join(_html(c["name"]) for c in cities)
+        await update.message.reply_text(
+            f"  {emoji} {name}: через <b>{diff}</b> дн. (remind: {', '.join(str(d) for d in REMIND_DAYS)})",
+            parse_mode="HTML",
+        )
+        if diff in REMIND_DAYS:
+            if diff == 7:
+                text = f"🔔 Через неделю: {emoji} <b>{name}</b>\n📍 {route}"
+            else:
+                text = f"🔔 Завтра: {emoji} <b>{name}</b>\n📍 {route}"
+            await update.message.reply_text(text, parse_mode="HTML")
+            sent += 1
+    await update.message.reply_text(
+        f"✅ Готово. Поездок: {len(trips)}, напоминаний: {sent}",
+        reply_markup=main_keyboard(),
+    )
 
 
 # ── Post-init: set commands & menu button ────────────────────────────────
@@ -1343,6 +1383,9 @@ def _build_bot_app(token: str) -> Application:
     # Standalone cancel (outside conversations)
     app.add_handler(MessageHandler(filters.Text([BTN_CANCEL]), cancel_standalone))
     app.add_handler(CommandHandler("cancel", cancel_standalone))
+
+    # Test reminder command
+    app.add_handler(CommandHandler("test_remind", cmd_test_remind))
 
     # Inline callbacks for delete with confirmation
     app.add_handler(CallbackQueryHandler(delete_callback, pattern=r"^del:"))
