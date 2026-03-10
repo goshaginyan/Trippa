@@ -30,6 +30,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from datepicker import DatePicker
 import storage
+import voice
 from web import create_app
 
 logging.basicConfig(
@@ -1273,6 +1274,65 @@ async def cmd_test_remind(update: Update, context) -> None:
     )
 
 
+# ── Voice message handler ─────────────────────────────────────────────────
+
+async def handle_voice(update: Update, context) -> None:
+    """Handle voice message: transcribe via Whisper, parse trip via GPT."""
+    msg = update.message
+    await msg.reply_text("🎙 Распознаю голосовое...")
+
+    voice_file = await msg.voice.get_file()
+    voice_bytes = await voice_file.download_as_bytearray()
+
+    text = await voice.transcribe(bytes(voice_bytes))
+    if not text:
+        await msg.reply_text(
+            "⚠️ Не удалось распознать голосовое сообщение.",
+            reply_markup=main_keyboard(),
+        )
+        return
+
+    await msg.reply_text(f"📝 <i>{_html(text)}</i>", parse_mode="HTML")
+
+    data = await voice.parse_trip(text)
+    if not data:
+        await msg.reply_text(
+            "⚠️ Не удалось извлечь данные о поездке.\nПопробуйте ещё раз, например:\n"
+            "<i>«Еду в Париж с 20 по 25 апреля, потом в Лион до 28-го»</i>",
+            parse_mode="HTML",
+            reply_markup=main_keyboard(),
+        )
+        return
+
+    cities = data.get("cities", [])
+    if not cities:
+        await msg.reply_text(
+            "⚠️ Не удалось определить города и даты.\nПопробуйте указать конкретнее.",
+            reply_markup=main_keyboard(),
+        )
+        return
+
+    trip = storage.add_trip(
+        user_id=msg.from_user.id,
+        name=data.get("name", "Поездка"),
+        trip_type=data.get("type", "trip"),
+        cities=cities,
+    )
+
+    schedule_creation_reminder(context.application, msg.from_user.id, trip)
+
+    emoji = EMOJI.get(trip["type"], "")
+    name = _html(trip["name"])
+    route = " → ".join(
+        f'{_html(c["name"])} ({c["dateFrom"]} — {c["dateTo"]})' for c in trip["cities"]
+    )
+    await msg.reply_text(
+        f"✅ Поездка создана!\n\n{emoji} <b>{name}</b>\n📍 {route}",
+        parse_mode="HTML",
+        reply_markup=main_keyboard(),
+    )
+
+
 # ── Post-init: set commands & menu button ────────────────────────────────
 
 async def post_init(application) -> None:
@@ -1421,6 +1481,9 @@ def _build_bot_app(token: str) -> Application:
     # Inline callbacks for delete with confirmation
     app.add_handler(CallbackQueryHandler(delete_callback, pattern=r"^del:"))
     app.add_handler(CallbackQueryHandler(delete_confirm_callback, pattern=r"^delconfirm:"))
+
+    # Voice messages
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
     return app
 
