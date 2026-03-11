@@ -70,6 +70,55 @@ def delete_trip(user_id: int, trip_id: str) -> bool:
     return True
 
 
+# ── Voice usage tracking ──────────────────────────────────────────────
+
+_VOICE_FILE = os.path.join(DATA_DIR, "_voice_usage.json")
+
+
+def _load_voice_data() -> dict:
+    if os.path.exists(_VOICE_FILE):
+        with open(_VOICE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def _save_voice_data(data: dict) -> None:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(_VOICE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def get_voice_count(user_id: int) -> int:
+    data = _load_voice_data()
+    entry = data.get(str(user_id), {})
+    return entry.get("count", 0)
+
+
+def increment_voice_count(user_id: int) -> int:
+    data = _load_voice_data()
+    key = str(user_id)
+    if key not in data:
+        data[key] = {"count": 0, "premium": False}
+    data[key]["count"] = data[key].get("count", 0) + 1
+    _save_voice_data(data)
+    return data[key]["count"]
+
+
+def is_premium(user_id: int) -> bool:
+    data = _load_voice_data()
+    entry = data.get(str(user_id), {})
+    return entry.get("premium", False)
+
+
+def set_premium(user_id: int, value: bool = True) -> None:
+    data = _load_voice_data()
+    key = str(user_id)
+    if key not in data:
+        data[key] = {"count": 0, "premium": False}
+    data[key]["premium"] = value
+    _save_voice_data(data)
+
+
 def update_trip(user_id: int, trip_id: str, updates: dict) -> dict | None:
     trips = load_trips(user_id)
     for t in trips:

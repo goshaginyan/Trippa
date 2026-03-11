@@ -1276,9 +1276,33 @@ async def cmd_test_remind(update: Update, context) -> None:
 
 # ── Voice message handler ─────────────────────────────────────────────────
 
+VOICE_FREE_LIMIT = 5
+VOICE_MAX_DURATION = 60  # seconds
+
+
 async def handle_voice(update: Update, context) -> None:
     """Handle voice message: transcribe via Whisper, parse trip via GPT."""
     msg = update.message
+    uid = msg.from_user.id
+
+    # Check duration
+    if msg.voice.duration > VOICE_MAX_DURATION:
+        await msg.reply_text(
+            f"⚠️ Голосовое сообщение слишком длинное (макс. {VOICE_MAX_DURATION} сек).",
+            reply_markup=main_keyboard(),
+        )
+        return
+
+    # Check free limit
+    if not storage.is_premium(uid) and storage.get_voice_count(uid) >= VOICE_FREE_LIMIT:
+        await msg.reply_text(
+            f"🔒 Бесплатный лимит ({VOICE_FREE_LIMIT} голосовых) исчерпан.\n\n"
+            "Для безлимитного доступа к голосовому вводу — "
+            "свяжитесь с @goshaginyan.",
+            reply_markup=main_keyboard(),
+        )
+        return
+
     await msg.reply_text("🎙 Распознаю голосовое...")
 
     try:
@@ -1314,24 +1338,25 @@ async def handle_voice(update: Update, context) -> None:
             return
 
         trip = storage.add_trip(
-            user_id=msg.from_user.id,
+            user_id=uid,
             name=data.get("name", "Поездка"),
             trip_type=data.get("type", "trip"),
             cities=cities,
         )
 
-        schedule_creation_reminder(context.application, msg.from_user.id, trip)
+        storage.increment_voice_count(uid)
+        schedule_creation_reminder(context.application, uid, trip)
 
+        remaining = VOICE_FREE_LIMIT - storage.get_voice_count(uid)
         emoji = EMOJI.get(trip["type"], "")
         name = _html(trip["name"])
         route = " → ".join(
             f'{_html(c["name"])} ({c["dateFrom"]} — {c["dateTo"]})' for c in trip["cities"]
         )
-        await msg.reply_text(
-            f"✅ Поездка создана!\n\n{emoji} <b>{name}</b>\n📍 {route}",
-            parse_mode="HTML",
-            reply_markup=main_keyboard(),
-        )
+        text = f"✅ Поездка создана!\n\n{emoji} <b>{name}</b>\n📍 {route}"
+        if not storage.is_premium(uid) and remaining >= 0:
+            text += f"\n\n🎙 Осталось голосовых: {remaining}/{VOICE_FREE_LIMIT}"
+        await msg.reply_text(text, parse_mode="HTML", reply_markup=main_keyboard())
     except Exception:
         logger.exception("Voice handler error")
         await msg.reply_text(
