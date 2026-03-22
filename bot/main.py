@@ -155,6 +155,15 @@ def _html(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _parse_callback(data: str, min_parts: int) -> list[str] | None:
+    """Split callback data and validate minimum number of parts."""
+    parts = data.split(":")
+    if len(parts) < min_parts:
+        logger.warning("Malformed callback data: %s", data)
+        return None
+    return parts
+
+
 # ── Date pickers ─────────────────────────────────────────────────────────
 _from_picker = DatePicker(prefix="from", show_year=True)
 _to_picker = DatePicker(prefix="to", show_year=True)
@@ -291,7 +300,10 @@ async def new_start(update: Update, context) -> int:
 async def new_type(update: Update, context) -> int:
     query = update.callback_query
     await query.answer()
-    trip_type = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return TYPE
+    trip_type = parts[1]
     context.user_data["new_trip"]["type"] = trip_type
     label = TYPE_LABELS.get(trip_type, trip_type)
     await query.edit_message_text(f"Тип: {EMOJI.get(trip_type, '')} {label}")
@@ -306,7 +318,14 @@ async def new_type(update: Update, context) -> int:
 
 
 async def new_name(update: Update, context) -> int:
-    context.user_data["new_trip"]["name"] = update.message.text.strip()
+    name = update.message.text.strip()
+    if not name:
+        await update.message.reply_text("Название не может быть пустым. Введите название:")
+        return NAME
+    if len(name) > 100:
+        await update.message.reply_text("Слишком длинное название (макс. 100). Попробуйте короче:")
+        return NAME
+    context.user_data["new_trip"]["name"] = name
     await _send_city_picker(update.message, context)
     return CITY_PICK
 
@@ -344,7 +363,14 @@ async def new_city_pick(update: Update, context) -> int:
 
 
 async def new_city_name(update: Update, context) -> int:
-    city = {"name": update.message.text.strip()}
+    name = update.message.text.strip()
+    if not name:
+        await update.message.reply_text("Название города не может быть пустым. Введите название:")
+        return CITY_NAME
+    if len(name) > 100:
+        await update.message.reply_text("Слишком длинное название (макс. 100). Попробуйте короче:")
+        return CITY_NAME
+    city = {"name": name}
     context.user_data["current_city"] = city
     await _send_calendar(update.message, context, _from_picker, "📅 Дата заезда:")
     return CITY_FROM
@@ -424,12 +450,24 @@ async def cal_to_callback(update: Update, context) -> int:
 
     if result[0] == "day":
         _, year, month, day = result
-        ds = f"{year}-{month:02d}-{day:02d}"
+        try:
+            d = date(year, month, day)
+        except ValueError:
+            await query.edit_message_text("Некорректная дата. Попробуйте ещё раз.")
+            await _send_calendar(query.message, context, _to_picker, "📅 Дата выезда:")
+            return CITY_TO
+        ds = d.strftime("%Y-%m-%d")
         city = context.user_data["current_city"]
+        date_from = city.get("dateFrom", "")
+        if date_from and ds < date_from:
+            await query.edit_message_text(
+                f"Дата выезда раньше даты заезда ({fmt_date(date_from)}). Выберите другую дату."
+            )
+            await _send_calendar(query.message, context, _to_picker, "📅 Дата выезда:")
+            return CITY_TO
         city["dateTo"] = ds
         context.user_data["new_trip"]["cities"].append(city)
 
-        d = date(year, month, day)
         await query.edit_message_text(f"📅 Выезд: {d.strftime('%d.%m.%Y')}")
         return await _ask_more_cities(query.message, context)
 
@@ -445,6 +483,12 @@ async def new_city_to(update: Update, context) -> int:
         return CITY_TO
 
     city = context.user_data["current_city"]
+    date_from = city.get("dateFrom", "")
+    if date_from and ds < date_from:
+        await update.message.reply_text(
+            f"Дата выезда раньше даты заезда ({fmt_date(date_from)}). Выберите другую дату:"
+        )
+        return CITY_TO
     city["dateTo"] = ds
     context.user_data["new_trip"]["cities"].append(city)
     return await _ask_more_cities(update.message, context)
@@ -470,7 +514,10 @@ async def _ask_more_cities(message, context) -> int:
 async def new_more_cities(update: Update, context) -> int:
     query = update.callback_query
     await query.answer()
-    choice = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return MORE_CITIES
+    choice = parts[1]
 
     if choice == "yes":
         await query.edit_message_text(query.message.text)
@@ -585,7 +632,10 @@ async def edit_start(update: Update, context) -> int:
     """Show field choices for the selected trip."""
     query = update.callback_query
     await query.answer()
-    trip_id = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return ConversationHandler.END
+    trip_id = parts[1]
     user_id = update.effective_user.id
     trips = storage.load_trips(user_id)
     trip = next((t for t in trips if t["id"] == trip_id), None)
@@ -670,7 +720,10 @@ async def edit_city_pick(update: Update, context) -> int:
     """Handle city selection or add/done/editname/cities/back."""
     query = update.callback_query
     await query.answer()
-    choice = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return EDIT_CITIES
+    choice = parts[1]
 
     user_id = update.effective_user.id
     trip_id = context.user_data["edit_trip_id"]
@@ -726,7 +779,11 @@ async def edit_city_pick(update: Update, context) -> int:
         return EDIT_ADD_PICK
 
     # Numeric city index
-    idx = int(choice)
+    try:
+        idx = int(choice)
+    except ValueError:
+        logger.warning("Invalid city index in callback: %s", choice)
+        return EDIT_CITIES
     context.user_data["edit_city_idx"] = idx
 
     trips = storage.load_trips(user_id)
@@ -752,7 +809,10 @@ async def edit_action(update: Update, context) -> int:
     """Handle action choice for a city."""
     query = update.callback_query
     await query.answer()
-    action = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return EDIT_ACTION
+    action = parts[1]
     user_id = update.effective_user.id
     trip_id = context.user_data["edit_trip_id"]
     idx = context.user_data["edit_city_idx"]
@@ -796,6 +856,12 @@ async def edit_action(update: Update, context) -> int:
 async def edit_city_name(update: Update, context) -> int:
     """Handle new city name or trip name text input."""
     new_name = update.message.text.strip()
+    if not new_name:
+        await update.message.reply_text("Название не может быть пустым. Введите ещё раз:")
+        return EDIT_CITY_NAME
+    if len(new_name) > 100:
+        await update.message.reply_text("Слишком длинное (макс. 100). Попробуйте короче:")
+        return EDIT_CITY_NAME
     user_id = update.effective_user.id
     trip_id = context.user_data["edit_trip_id"]
     idx = context.user_data.get("edit_city_idx")
@@ -899,7 +965,17 @@ async def edit_cal_to(update: Update, context) -> int:
             await query.edit_message_text("Поездка не найдена.")
             return ConversationHandler.END
 
-        trip["cities"][idx]["dateFrom"] = context.user_data["edit_new_from"]
+        date_from = context.user_data.get("edit_new_from", "")
+        if date_from and ds < date_from:
+            await query.edit_message_text(
+                f"Дата выезда раньше даты заезда ({fmt_date(date_from)}). Выберите другую дату."
+            )
+            today = date.today()
+            kb = _eto_picker.build(today.year, today.month)
+            await query.message.reply_text("📅 Дата выезда:", reply_markup=kb)
+            return EDIT_CITY_TO
+
+        trip["cities"][idx]["dateFrom"] = date_from
         trip["cities"][idx]["dateTo"] = ds
         storage.update_trip(user_id, trip_id, {"cities": trip["cities"]})
 
@@ -932,7 +1008,14 @@ async def edit_city_to_text(update: Update, context) -> int:
         await update.message.reply_text("Поездка не найдена.", reply_markup=main_keyboard())
         return ConversationHandler.END
 
-    trip["cities"][idx]["dateFrom"] = context.user_data["edit_new_from"]
+    date_from = context.user_data.get("edit_new_from", "")
+    if date_from and ds < date_from:
+        await update.message.reply_text(
+            f"Дата выезда раньше даты заезда ({fmt_date(date_from)}). Выберите другую дату:"
+        )
+        return EDIT_CITY_TO
+
+    trip["cities"][idx]["dateFrom"] = date_from
     trip["cities"][idx]["dateTo"] = ds
     storage.update_trip(user_id, trip_id, {"cities": trip["cities"]})
 
@@ -962,7 +1045,14 @@ async def edit_add_pick(update: Update, context) -> int:
 
 async def edit_add_name(update: Update, context) -> int:
     """Handle custom city name input during edit-add."""
-    context.user_data["edit_new_city"] = {"name": update.message.text.strip()}
+    name = update.message.text.strip()
+    if not name:
+        await update.message.reply_text("Название города не может быть пустым. Введите ещё раз:")
+        return EDIT_ADD_NAME
+    if len(name) > 100:
+        await update.message.reply_text("Слишком длинное (макс. 100). Попробуйте короче:")
+        return EDIT_ADD_NAME
+    context.user_data["edit_new_city"] = {"name": name}
     today = date.today()
     kb = _eafrom_picker.build(today.year, today.month)
     await update.message.reply_text("📅 Дата заезда:", reply_markup=kb)
@@ -1030,6 +1120,15 @@ async def edit_add_cal_to(update: Update, context) -> int:
     if result[0] == "day":
         _, year, month, day = result
         ds = f"{year}-{month:02d}-{day:02d}"
+        date_from = context.user_data["edit_new_city"].get("dateFrom", "")
+        if date_from and ds < date_from:
+            await query.edit_message_text(
+                f"Дата выезда раньше даты заезда ({fmt_date(date_from)}). Выберите другую дату."
+            )
+            today = date.today()
+            kb = _eato_picker.build(today.year, today.month)
+            await query.message.reply_text("📅 Дата выезда:", reply_markup=kb)
+            return EDIT_ADD_TO
         context.user_data["edit_new_city"]["dateTo"] = ds
 
         user_id = update.effective_user.id
@@ -1071,6 +1170,12 @@ async def edit_add_to_text(update: Update, context) -> int:
         await update.message.reply_text("Поездка не найдена.", reply_markup=main_keyboard())
         return ConversationHandler.END
 
+    date_from = context.user_data["edit_new_city"].get("dateFrom", "")
+    if date_from and ds < date_from:
+        await update.message.reply_text(
+            f"Дата выезда раньше даты заезда ({fmt_date(date_from)}). Выберите другую дату:"
+        )
+        return EDIT_ADD_TO
     context.user_data["edit_new_city"]["dateTo"] = ds
     trip["cities"].append(context.user_data["edit_new_city"])
     storage.update_trip(user_id, trip_id, {"cities": trip["cities"]})
@@ -1121,7 +1226,10 @@ async def cmd_delete(update: Update, context) -> None:
 async def delete_callback(update: Update, context) -> None:
     query = update.callback_query
     await query.answer()
-    trip_id = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return
+    trip_id = parts[1]
     user_id = update.effective_user.id
 
     trips = storage.load_trips(user_id)
@@ -1144,7 +1252,10 @@ async def delete_callback(update: Update, context) -> None:
 async def delete_confirm_callback(update: Update, context) -> None:
     query = update.callback_query
     await query.answer()
-    choice = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return
+    choice = parts[1]
 
     if choice == "yes":
         trip_id = context.user_data.pop("del_trip_id", None)
@@ -1446,6 +1557,21 @@ async def successful_payment(update: Update, context) -> None:
         )
 
 
+# ── Error handler ────────────────────────────────────────────────────────
+
+async def error_handler(update: object, context) -> None:
+    """Log errors and notify the user."""
+    logger.error("Unhandled exception:", exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message:
+        try:
+            await update.effective_message.reply_text(
+                "Произошла ошибка. Попробуйте ещё раз или напишите /start.",
+                reply_markup=main_keyboard(),
+            )
+        except Exception:
+            logger.error("Failed to send error message to user", exc_info=True)
+
+
 # ── Post-init: set commands & menu button ────────────────────────────────
 
 async def post_init(application) -> None:
@@ -1604,6 +1730,9 @@ def _build_bot_app(token: str) -> Application:
 
     # Voice messages
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+
+    # Error handler — catches unhandled exceptions
+    app.add_error_handler(error_handler)
 
     return app
 

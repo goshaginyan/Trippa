@@ -1,12 +1,16 @@
 """Simple JSON file storage per user, matching Trippa data format."""
 
 import json
+import logging
 import os
-import time
 import random
 import string
+import tempfile
+import time
 
 from config import DATA_DIR
+
+logger = logging.getLogger(__name__)
 
 
 def _user_file(user_id: int) -> str:
@@ -31,14 +35,36 @@ def load_trips(user_id: int) -> list[dict]:
     path = _user_file(user_id)
     if not os.path.exists(path):
         return []
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if not isinstance(data, list):
+                raise ValueError("Expected list at top level")
+            return data
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error("Corrupted data file for user %s: %s", user_id, e)
+        corrupt_path = path + ".corrupt"
+        try:
+            os.rename(path, corrupt_path)
+        except OSError:
+            pass
+        return []
 
 
 def save_trips(user_id: int, trips: list[dict]) -> None:
     path = _user_file(user_id)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(trips, f, ensure_ascii=False, indent=2)
+    dir_name = os.path.dirname(path)
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(trips, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def gen_id() -> str:
@@ -58,6 +84,7 @@ def add_trip(user_id: int, name: str, trip_type: str, cities: list[dict], notif_
     }
     trips.append(trip)
     save_trips(user_id, trips)
+    logger.info("User %s created trip %s (%s)", user_id, trip["id"], name)
     return trip
 
 
@@ -67,7 +94,34 @@ def delete_trip(user_id: int, trip_id: str) -> bool:
     if len(new_trips) == len(trips):
         return False
     save_trips(user_id, new_trips)
+    logger.info("User %s deleted trip %s", user_id, trip_id)
     return True
+
+
+def update_trip(user_id: int, trip_id: str, updates: dict) -> dict | None:
+    """Update fields of an existing trip. Returns updated trip or None."""
+    trips = load_trips(user_id)
+    for trip in trips:
+        if trip["id"] == trip_id:
+            trip.update(updates)
+            save_trips(user_id, trips)
+            logger.info("User %s updated trip %s: %s", user_id, trip_id, list(updates.keys()))
+            return trip
+    return None
+
+
+def remove_city_from_trip(user_id: int, trip_id: str, city_index: int) -> dict | None:
+    """Remove a city by index from a trip. Returns updated trip or None."""
+    trips = load_trips(user_id)
+    for trip in trips:
+        if trip["id"] == trip_id:
+            cities = trip.get("cities", [])
+            if 0 <= city_index < len(cities):
+                removed = cities.pop(city_index)
+                save_trips(user_id, trips)
+                logger.info("User %s removed city %s from trip %s", user_id, removed.get("name"), trip_id)
+                return trip
+    return None
 
 
 # ── Voice usage tracking ──────────────────────────────────────────────
@@ -117,13 +171,3 @@ def set_premium(user_id: int, value: bool = True) -> None:
         data[key] = {"count": 0, "premium": False}
     data[key]["premium"] = value
     _save_voice_data(data)
-
-
-def update_trip(user_id: int, trip_id: str, updates: dict) -> dict | None:
-    trips = load_trips(user_id)
-    for t in trips:
-        if t["id"] == trip_id:
-            t.update(updates)
-            save_trips(user_id, trips)
-            return t
-    return None
