@@ -515,6 +515,34 @@ header h1 { font-size:2rem; }
 (function() {
   "use strict";
 
+  /* ── Telegram Mini App detection ── */
+  var tgWebApp = window.Telegram && window.Telegram.WebApp;
+  var initData = tgWebApp ? tgWebApp.initData : '';
+  var isMiniApp = !!initData;
+
+  var API_BASE = '';
+  if (isMiniApp) {
+    API_BASE = window.location.origin;
+    tgWebApp.ready();
+    tgWebApp.expand();
+  }
+
+  /* ── API client (Mini App mode) ── */
+  function apiRequest(method, path, body) {
+    var opts = {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': initData
+      }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    return fetch(API_BASE + path, opts).then(function(r) {
+      if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
+      return r.json();
+    });
+  }
+
   // Safe localStorage wrapper
   var storageOk = false;
   try { localStorage.setItem("_t", "1"); localStorage.removeItem("_t"); storageOk = true; } catch(e) {}
@@ -712,7 +740,9 @@ header h1 { font-size:2rem; }
   // State
   var trips = [];
   var editingId = null;
-  try { var s = storeGet("trippa_data"); if (s) trips = JSON.parse(s); } catch(e) { trips = []; }
+  if (!isMiniApp) {
+    try { var s = storeGet("trippa_data"); if (s) trips = JSON.parse(s); } catch(e) { trips = []; }
+  }
 
   function suggest(q) {
     if (!q) return [];
@@ -746,7 +776,7 @@ header h1 { font-size:2rem; }
   }
 
   function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
-  function persist() { storeSet("trippa_data", JSON.stringify(trips)); }
+  function persist() { if (!isMiniApp) storeSet("trippa_data", JSON.stringify(trips)); }
 
   // Service Worker & Notifications
   var swReg = null;
@@ -900,11 +930,20 @@ header h1 { font-size:2rem; }
         btn.onclick = function() {
           if (confirm(t("deleteConfirm"))) {
             var id = btn.getAttribute("data-del");
-            var next = [];
-            for (var j = 0; j < trips.length; j++) { if (trips[j].id !== id) next.push(trips[j]); }
-            trips = next;
-            persist();
-            render();
+            if (isMiniApp) {
+              apiRequest('DELETE', '/api/trips/' + id).then(function() {
+                var next = [];
+                for (var j = 0; j < trips.length; j++) { if (trips[j].id !== id) next.push(trips[j]); }
+                trips = next;
+                render();
+              }).catch(function() { showToast('Error deleting trip'); });
+            } else {
+              var next = [];
+              for (var j = 0; j < trips.length; j++) { if (trips[j].id !== id) next.push(trips[j]); }
+              trips = next;
+              persist();
+              render();
+            }
           }
         };
       })(btns[i]);
@@ -1252,19 +1291,39 @@ header h1 { font-size:2rem; }
     if (!cities.length) { alert(t("alertNoCity")); return; }
     if (!valid) { alert(t("alertFillAll")); return; }
 
-    if (editingId) {
-      for (var i = 0; i < trips.length; i++) {
-        if (trips[i].id === editingId) {
-          trips[i].name = name; trips[i].type = type;
-          trips[i].cities = cities; trips[i].notifDays = nd;
-          trips[i].isPublic = isPublic;
-          break;
-        }
+    if (isMiniApp) {
+      if (editingId) {
+        apiRequest('PUT', '/api/trips/' + editingId, { name: name, type: type, cities: cities, notifDays: nd, isPublic: isPublic })
+          .then(function(updated) {
+            for (var i = 0; i < trips.length; i++) {
+              if (trips[i].id === editingId) { trips[i] = updated; break; }
+            }
+            closeModal(); render();
+          })
+          .catch(function() { showToast('Error saving trip'); });
+      } else {
+        apiRequest('POST', '/api/trips', { name: name, type: type, cities: cities, notifDays: nd, isPublic: isPublic })
+          .then(function(trip) {
+            trips.push(trip);
+            closeModal(); render();
+          })
+          .catch(function() { showToast('Error creating trip'); });
       }
     } else {
-      trips.push({ id: genId(), name: name, type: type, cities: cities, notifDays: nd, isPublic: isPublic });
+      if (editingId) {
+        for (var i = 0; i < trips.length; i++) {
+          if (trips[i].id === editingId) {
+            trips[i].name = name; trips[i].type = type;
+            trips[i].cities = cities; trips[i].notifDays = nd;
+            trips[i].isPublic = isPublic;
+            break;
+          }
+        }
+      } else {
+        trips.push({ id: genId(), name: name, type: type, cities: cities, notifDays: nd, isPublic: isPublic });
+      }
+      persist(); closeModal(); render();
     }
-    persist(); closeModal(); render();
   }
 
   // ====== Sharing ======
@@ -1436,17 +1495,31 @@ header h1 { font-size:2rem; }
     }
   });
 
+  // Load trips from API in Mini App mode
+  function loadTripsFromApi() {
+    apiRequest('GET', '/api/trips').then(function(data) {
+      trips = data;
+      render();
+    }).catch(function() {
+      showToast('Error loading trips');
+    });
+  }
+
   // Init
   if (checkSharedView()) {
     applyLang();
     renderSharedView();
   } else {
-    registerSW();
+    if (!isMiniApp) registerSW();
     applyLang();
     updateBanner();
     render();
-    try { checkNotif(); } catch(e) {}
-    try { setInterval(checkNotif, 21600000); } catch(e) {}
+    if (isMiniApp) {
+      loadTripsFromApi();
+    } else {
+      try { checkNotif(); } catch(e) {}
+      try { setInterval(checkNotif, 21600000); } catch(e) {}
+    }
   }
 
 })();

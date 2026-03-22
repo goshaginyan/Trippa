@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+
+<html lang="ru" id="htmlRoot">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trippa">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<title>Trippa</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232733;
+  --border: #2e3344;
+  --text: #e8eaf0;
+  --text-dim: #8b90a5;
+  --accent: #f0a050;
+  --accent-glow: rgba(240,160,80,0.15);
+  --trip: #5b8cf7;
+  --vacation: #50c878;
+  --business: #f0a050;
+  --weekend: #c77dff;
+  --other: #ff6b8a;
+  --danger: #ff4d6a;
+  --radius: 14px;
+  --radius-sm: 8px;
+  color-scheme: dark;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+.container { max-width:720px; margin:0 auto; padding:24px 16px 80px; }
+
+/* HEADER */
+header { text-align:center; padding:40px 0 32px; }
+header h1 {
+font-family: Georgia, ‘Times New Roman’, serif;
+font-size: 2.6rem;
+font-weight: 400;
+letter-spacing: -0.02em;
+color: var(--accent);
+}
+header p { color:var(--text-dim); font-size:0.95rem; margin-top:6px; font-weight:300; }
+
+/* NOTIFICATION BANNER */
+.notif-banner {
+background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+padding:12px 16px; margin-bottom:24px; display:flex; align-items:center; gap:12px;
+font-size:0.88rem; color:var(--text-dim); cursor:pointer; transition:border-color 0.2s;
+}
+.notif-banner:hover { border-color:var(--accent); }
+.notif-banner .icon { font-size:1.3rem; flex-shrink:0; }
+.notif-banner.granted { border-color:var(--vacation); color:var(--vacation); }
+.notif-banner.denied { border-color:var(--danger); color:var(--danger); }
+
+/* ADD BUTTON */
+.add-btn {
+width:100%; padding:14px; background:var(--accent); color:var(--bg); border:none;
+border-radius:var(--radius); font-family:inherit; font-size:1rem; font-weight:600;
+cursor:pointer; transition:all 0.2s; margin-bottom:32px; letter-spacing:0.02em;
+-webkit-appearance:none;
+}
+.add-btn:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 24px var(--accent-glow); }
+
+/* SECTION TITLE */
+.section-title {
+font-size:0.8rem; text-transform:uppercase; letter-spacing:0.12em;
+color:var(--text-dim); margin-bottom:14px; font-weight:500;
+}
+
+/* TRIP CARD */
+.trip-card {
+background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+padding:20px; margin-bottom:12px; position:relative; transition:border-color 0.2s, transform 0.2s;
+animation: slideIn 0.3s ease-out;
+}
+.trip-card:hover { border-color:#3e4460; transform:translateY(-1px); }
+@keyframes slideIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.trip-card .type-badge {
+display:inline-block; font-size:0.72rem; font-weight:600; text-transform:uppercase;
+letter-spacing:0.1em; padding:3px 10px; border-radius:20px; margin-bottom:10px;
+}
+.type-business .type-badge { background:rgba(240,160,80,0.15); color:var(--business); }
+.type-vacation .type-badge { background:rgba(80,200,120,0.15); color:var(--vacation); }
+.type-weekend .type-badge { background:rgba(199,125,255,0.15); color:var(--weekend); }
+.type-trip .type-badge { background:rgba(91,140,247,0.15); color:var(--trip); }
+.type-other .type-badge { background:rgba(255,107,138,0.15); color:var(--other); }
+
+.trip-card .trip-name {
+font-family: Georgia, ‘Times New Roman’, serif;
+font-size:1.35rem; font-weight:400; margin-bottom:12px; color:var(--text);
+}
+.trip-card .cities { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+.city-row { display:flex; align-items:center; gap:10px; font-size:0.88rem; }
+.city-row .city-name { font-weight:500; min-width:100px; }
+.city-row .city-dates { color:var(--text-dim); font-weight:300; }
+.city-row .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.type-business .dot { background:var(--business); }
+.type-vacation .dot { background:var(--vacation); }
+.type-weekend .dot { background:var(--weekend); }
+.type-trip .dot { background:var(--trip); }
+.type-other .dot { background:var(--other); }
+
+.trip-card .countdown {
+font-size:0.82rem; color:var(--text-dim); padding-top:12px;
+border-top:1px solid var(--border); display:flex; align-items:center; gap:6px;
+}
+.countdown .days-num { font-weight:700; font-size:1.1rem; }
+.type-business .days-num { color:var(--business); }
+.type-vacation .days-num { color:var(--vacation); }
+.type-weekend .days-num { color:var(--weekend); }
+.type-trip .days-num { color:var(--trip); }
+.type-other .days-num { color:var(--other); }
+
+.trip-card .active-label {
+font-size:0.78rem; font-weight:600; color:var(--vacation);
+padding:2px 8px; background:rgba(80,200,120,0.12); border-radius:12px; display:inline-block;
+}
+.trip-card .delete-btn {
+position:absolute; top:16px; right:16px; background:none; border:none;
+color:var(--text-dim); font-size:1.1rem; cursor:pointer; opacity:0;
+transition:opacity 0.2s, color 0.2s; padding:4px;
+}
+.trip-card:hover .delete-btn { opacity:1; }
+.trip-card .delete-btn:hover { color:var(--danger); }
+
+/* ARCHIVE */
+.archive-section { margin-top:48px; }
+.archive-section .trip-card { opacity:0.5; border-style:dashed; }
+.archive-section .trip-card:hover { opacity:0.75; }
+
+.empty-state { text-align:center; padding:48px 20px; color:var(--text-dim); font-size:0.95rem; }
+.empty-state .icon { font-size:2.4rem; margin-bottom:10px; }
+
+/* MODAL */
+.modal-overlay {
+display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+z-index:1000; align-items:center; justify-content:center; padding:16px;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+width:100%; max-width:520px; max-height:90vh; overflow-y:auto; padding:28px;
+animation: modalIn 0.25s ease-out;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+
+.modal h2 {
+font-family: Georgia, ‘Times New Roman’, serif;
+font-size:1.5rem; font-weight:400; margin-bottom:24px; color:var(--text);
+}
+
+/* FORM ELEMENTS */
+.form-group { margin-bottom:18px; }
+.form-group label {
+display:block; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em;
+color:var(--text-dim); margin-bottom:8px; font-weight:500;
+}
+
+input[type=”text”],
+input[type=”date”],
+select {
+display:block;
+width:100%;
+min-width:0;
+max-width:100%;
+box-sizing:border-box;
+padding:12px 16px;
+background:var(--bg);
+border:1px solid var(--border);
+border-radius:10px;
+color:var(--text);
+-webkit-text-fill-color:var(--text);
+font-family:inherit;
+font-size:1rem;
+line-height:1.4;
+outline:none;
+transition:border-color 0.2s, box-shadow 0.2s;
+-webkit-appearance:none;
+-moz-appearance:none;
+appearance:none;
+opacity:1;
+}
+input[type=”text”]::placeholder,
+input[type=”date”]::placeholder {
+color:var(--text-dim); -webkit-text-fill-color:var(--text-dim); opacity:0.5;
+}
+input[type=”text”]:focus,
+input[type=”date”]:focus,
+select:focus {
+border-color:var(--accent);
+box-shadow:0 0 0 3px var(--accent-glow);
+}
+
+/* Custom select arrow */
+select {
+background-image: url(“data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=’http://www.w3.org/2000/svg’ width=’12’ height=’12’ viewBox=’0 0 12 12’%3E%3Cpath fill=’%238b90a5’ d=’M6 8L1 3h10z’/%3E%3C/svg%3E”);
+background-repeat:no-repeat;
+background-position:right 12px center;
+padding-right:36px;
+cursor:pointer;
+}
+select option { background:var(--surface2); color:var(--text); }
+
+/* Date input */
+input[type=”date”]::-webkit-datetime-edit { color:var(--text); }
+input[type=”date”]::-webkit-calendar-picker-indicator {
+filter:invert(0.7); cursor:pointer;
+}
+
+.cities-container { display:flex; flex-direction:column; gap:10px; }
+.city-input-row {
+display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:start;
+}
+.city-input-row .suggest-wrapper { grid-column:1/-1; }
+.city-input-row input {
+font-size:1rem; padding:10px 12px;
+}
+.remove-city-btn {
+background:none; border:none; color:var(--text-dim); font-size:1.2rem;
+cursor:pointer; padding:8px 4px; transition:color 0.2s;
+-webkit-appearance:none;
+}
+.remove-city-btn:hover { color:var(--danger); }
+
+.add-city-btn {
+background:var(--surface2); border:1px dashed var(--border); border-radius:var(--radius-sm);
+color:var(--text-dim); font-family:inherit; font-size:0.85rem; padding:8px;
+cursor:pointer; transition:all 0.2s; width:100%; margin-top:4px;
+-webkit-appearance:none;
+}
+.add-city-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* SUGGESTIONS */
+.suggest-wrapper { position:relative; }
+.suggest-list {
+position:absolute; top:100%; left:0; right:0; background:var(--surface2);
+border:1px solid var(--border); border-radius:var(--radius-sm);
+max-height:160px; overflow-y:auto; z-index:10; display:none;
+}
+.suggest-list.open { display:block; }
+.suggest-item { padding:8px 12px; font-size:0.85rem; cursor:pointer; transition:background 0.15s; color:var(--text); }
+.suggest-item:hover, .suggest-item:active { background:var(--border); }
+
+/* MODAL ACTIONS */
+.modal-actions { display:flex; gap:10px; margin-top:24px; }
+.modal-actions button {
+flex:1; padding:12px; border-radius:var(--radius-sm); font-family:inherit;
+font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s;
+border:none; -webkit-appearance:none;
+}
+.btn-save { background:var(--accent); color:var(--bg); }
+.btn-save:hover { filter:brightness(1.1); }
+.btn-save:active { filter:brightness(0.9); }
+.btn-cancel { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border); }
+.btn-cancel:hover { border-color:var(--text-dim); color:var(--text); }
+
+/* NOTIF SETTING */
+.notif-setting {
+display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(--text-dim);
+margin-bottom:18px; padding:10px 14px; background:var(--surface2); border-radius:var(--radius-sm);
+}
+.notif-setting select { width:auto; padding:6px 10px; font-size:16px; }
+
+/* LANG TOGGLE */
+.lang-toggle {
+display:flex; gap:0; justify-content:center; margin-top:12px;
+}
+.lang-toggle button {
+padding:4px 12px; font-family:inherit; font-size:0.78rem; font-weight:600;
+letter-spacing:0.05em; border:1px solid var(--border); background:var(--surface);
+color:var(--text-dim); cursor:pointer; transition:all 0.2s;
+-webkit-appearance:none;
+}
+.lang-toggle button:first-child { border-radius:20px 0 0 20px; }
+.lang-toggle button:last-child { border-radius:0 20px 20px 0; }
+.lang-toggle button.active {
+background:var(--accent); color:var(--bg); border-color:var(--accent);
+}
+
+/* PRIVACY TOGGLE */
+.privacy-setting {
+display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(--text-dim);
+margin-bottom:18px; padding:10px 14px; background:var(--surface2); border-radius:var(--radius-sm);
+}
+.privacy-toggle {
+position:relative; width:44px; height:24px; flex-shrink:0;
+}
+.privacy-toggle input { opacity:0; width:0; height:0; position:absolute; }
+.privacy-toggle .slider {
+position:absolute; inset:0; background:var(--border); border-radius:24px;
+cursor:pointer; transition:background 0.2s;
+}
+.privacy-toggle .slider:before {
+content:""; position:absolute; width:18px; height:18px; left:3px; top:3px;
+background:var(--text-dim); border-radius:50%; transition:all 0.2s;
+}
+.privacy-toggle input:checked + .slider { background:var(--vacation); }
+.privacy-toggle input:checked + .slider:before { transform:translateX(20px); background:#fff; }
+
+/* PRIVACY BADGE */
+.trip-card .privacy-badge {
+font-size:0.68rem; color:var(--text-dim); margin-left:8px; opacity:0.6;
+}
+
+/* SHARE BUTTON */
+.share-btn {
+width:100%; padding:12px; background:var(--surface); color:var(--text-dim); border:1px solid var(--border);
+border-radius:var(--radius); font-family:inherit; font-size:0.9rem; font-weight:500;
+cursor:pointer; transition:all 0.2s; margin-bottom:16px; display:flex; align-items:center;
+justify-content:center; gap:8px;
+}
+.share-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* SHARED VIEW */
+.shared-banner {
+background:var(--surface); border:1px solid var(--accent); border-radius:var(--radius);
+padding:16px 20px; margin-bottom:24px; text-align:center;
+}
+.shared-banner .shared-title { font-size:1rem; color:var(--accent); font-weight:600; margin-bottom:4px; }
+.shared-banner .shared-subtitle { font-size:0.82rem; color:var(--text-dim); }
+.shared-banner .own-link {
+display:inline-block; margin-top:10px; padding:8px 18px; background:var(--accent); color:var(--bg);
+border:none; border-radius:var(--radius-sm); font-family:inherit; font-size:0.85rem;
+font-weight:600; cursor:pointer; text-decoration:none; transition:filter 0.2s;
+}
+.shared-banner .own-link:hover { filter:brightness(1.1); }
+
+/* TOAST */
+.toast {
+position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(80px);
+background:var(--surface); border:1px solid var(--accent); color:var(--text);
+padding:12px 24px; border-radius:var(--radius); font-size:0.88rem;
+z-index:3000; opacity:0; transition:all 0.3s ease; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* EDIT BUTTON */
+.trip-card .edit-btn {
+position:absolute; top:16px; right:44px; background:none; border:none;
+color:var(--text-dim); font-size:1.1rem; cursor:pointer; opacity:0;
+transition:opacity 0.2s, color 0.2s; padding:4px;
+}
+.trip-card:hover .edit-btn { opacity:1; }
+.trip-card .edit-btn:hover { color:var(--accent); }
+
+/* STORY BUTTON */
+.trip-card .story-btn {
+position:absolute; top:16px; right:72px; background:none; border:none;
+color:var(--text-dim); font-size:1.3rem; cursor:pointer; opacity:0;
+transition:opacity 0.2s, color 0.2s; padding:4px;
+}
+.trip-card:hover .story-btn { opacity:1; }
+.trip-card .story-btn:hover { color:var(--accent); }
+
+/* STORY OVERLAY */
+.story-overlay {
+display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75);
+backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+z-index:2000; align-items:center; justify-content:center; padding:16px;
+flex-direction:column; gap:16px;
+}
+.story-overlay.open { display:flex; }
+.story-preview {
+border-radius:16px; overflow:hidden;
+max-height:70vh; max-width:calc(70vh * 9 / 16);
+box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.story-preview canvas { width:100%; height:100%; display:block; }
+.story-actions { display:flex; gap:10px; }
+.story-actions button {
+padding:12px 28px; border-radius:var(--radius-sm); font-family:inherit;
+font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s; border:none;
+}
+.story-download { background:var(--accent); color:var(--bg); }
+.story-download:hover { filter:brightness(1.1); }
+.story-close { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border) !important; }
+.story-close:hover { border-color:var(--text-dim) !important; color:var(--text); }
+
+/* MOBILE */
+@media (max-width:500px) {
+header h1 { font-size:2rem; }
+.city-input-row { grid-template-columns:1fr 1fr; gap:6px; }
+.remove-city-btn { grid-column:1/-1; text-align:right; padding:2px; }
+/* On mobile, show action buttons always */
+.trip-card .delete-btn { opacity:0.6; }
+.trip-card .edit-btn { opacity:0.6; }
+.trip-card .story-btn { opacity:0.6; }
+}
+</style>
+
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Trippa</h1>
+    <p id="tagline">Планируй &middot; Делись &middot; Путешествуй</p>
+    <div class="lang-toggle" id="langToggle">
+      <button data-lang="ru" class="active">RU</button>
+      <button data-lang="en">EN</button>
+    </div>
+  </header>
+
+  <div class="notif-banner" id="notifBanner">
+    <span class="icon">&#128276;</span>
+    <span id="notifText">Нажмите, чтобы включить уведомления</span>
+  </div>
+
+<button class="share-btn" id="shareBtn">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  <span id="shareBtnText">Поделиться поездками</span>
+</button>
+<button class="add-btn" id="addBtn">+ Добавить поездку</button>
+
+  <div id="upcomingSection">
+    <div class="section-title" id="upcomingTitle">Предстоящие</div>
+    <div id="upcomingList"></div>
+  </div>
+
+  <div class="archive-section" id="archiveSection" style="display:none">
+    <div class="section-title" id="archiveTitle">Архив</div>
+    <div id="archiveList"></div>
+  </div>
+</div>
+
+<div class="story-overlay" id="storyOverlay">
+  <div class="story-preview" id="storyPreview"></div>
+  <div class="story-actions">
+    <button class="story-close" id="storyCloseBtn">Закрыть</button>
+    <button class="story-download" id="storyDownloadBtn">Скачать</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBox">
+    <h2 id="modalTitle">Новая поездка</h2>
+
+<div class="form-group">
+  <label id="labelType">Тип</label>
+  <select id="tripType">
+    <option value="vacation" id="optVacation">Отпуск</option>
+    <option value="business" id="optBusiness">Командировка</option>
+    <option value="weekend" id="optWeekend">Выходные</option>
+    <option value="trip" id="optTrip">Поездка</option>
+    <option value="other" id="optOther">Другое</option>
+  </select>
+</div>
+
+<div class="form-group">
+  <label id="labelName">Название</label>
+  <input type="text" id="tripName" placeholder="Например: Отпуск в Европе">
+</div>
+
+<div class="form-group">
+  <label id="labelCities">Города и даты</label>
+  <div class="cities-container" id="citiesContainer"></div>
+  <button class="add-city-btn" id="addCityBtn">+ Добавить город</button>
+</div>
+
+<div class="privacy-setting">
+  <label class="privacy-toggle">
+    <input type="checkbox" id="tripPublic">
+    <span class="slider"></span>
+  </label>
+  <span id="labelPrivacy">Публичная поездка (видна по ссылке)</span>
+</div>
+
+<div class="notif-setting">
+  <span id="labelRemind">Напомнить за</span>
+  <select id="notifDays">
+    <option value="0" id="optDay0">в день отъезда</option>
+    <option value="1" selected id="optDay1">1 день</option>
+    <option value="3" id="optDay3">3 дня</option>
+    <option value="7" id="optDay7">7 дней</option>
+    <option value="14" id="optDay14">14 дней</option>
+  </select>
+</div>
+
+<div class="modal-actions">
+  <button class="btn-cancel" id="cancelBtn">Отмена</button>
+  <button class="btn-save" id="saveBtn">Сохранить</button>
+</div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  "use strict";
+
+  // Safe localStorage wrapper
+  var storageOk = false;
+  try { localStorage.setItem("_t", "1"); localStorage.removeItem("_t"); storageOk = true; } catch(e) {}
+  function storeGet(k) { if (!storageOk) return null; try { return localStorage.getItem(k); } catch(e) { return null; } }
+  function storeSet(k, v) { if (!storageOk) return; try { localStorage.setItem(k, v); } catch(e) {} }
+
+  // ====== i18n ======
+  var I18N = {
+    ru: {
+      tagline: "Планируй \u00b7 Делись \u00b7 Путешествуй",
+      addTrip: "+ Добавить поездку",
+      upcoming: "Предстоящие",
+      archive: "Архив",
+      newTrip: "Новая поездка",
+      editTrip: "Редактировать",
+      labelType: "Тип",
+      labelName: "Название",
+      labelCities: "Города и даты",
+      labelRemind: "Напомнить за",
+      addCity: "+ Добавить город",
+      cancel: "Отмена",
+      save: "Сохранить",
+      cityPlaceholder: "Город",
+      namePlaceholder: "Например: Отпуск в Европе",
+      vacation: "Отпуск",
+      business: "Командировка",
+      weekend: "Выходные",
+      trip: "Поездка",
+      other: "Другое",
+      day0: "в день отъезда",
+      day1: "1 день",
+      day3: "3 дня",
+      day7: "7 дней",
+      day14: "14 дней",
+      notifUnsupported: "Уведомления не поддерживаются",
+      notifGranted: "Уведомления включены",
+      notifDenied: "Уведомления заблокированы",
+      notifAsk: "Нажмите, чтобы включить уведомления",
+      noTrips: "Нет предстоящих поездок",
+      addFirst: "Добавьте первую!",
+      traveling: "Сейчас в поездке!",
+      departToday: "Отъезд сегодня!",
+      inPrefix: "через",
+      deleteConfirm: "Удалить поездку?",
+      alertNoCity: "Добавьте хотя бы один город с датами",
+      alertFillAll: "Заполните все поля для каждого города",
+      notifToday: "Сегодня",
+      notifIn: "Через",
+      storyClose: "Закрыть",
+      storyDownload: "Скачать",
+      storyShare: "Поделиться",
+      storyRoute: "Маршрут",
+      shareTrips: "Поделиться поездками",
+      publicTrip: "Публичная поездка (видна по ссылке)",
+      privateLabel: "приватная",
+      publicLabel: "публичная",
+      linkCopied: "Ссылка скопирована!",
+      noPublicTrips: "Нет публичных поездок для расшаривания",
+      sharedView: "Поездки пользователя",
+      sharedSubtitle: "Просмотр публичных поездок",
+      openOwn: "Открыть свой Trippa"
+    },
+    en: {
+      tagline: "Plan \u00b7 Share \u00b7 Travel",
+      addTrip: "+ Add trip",
+      upcoming: "Upcoming",
+      archive: "Archive",
+      newTrip: "New trip",
+      editTrip: "Edit",
+      labelType: "Type",
+      labelName: "Name",
+      labelCities: "Cities and dates",
+      labelRemind: "Remind",
+      addCity: "+ Add city",
+      cancel: "Cancel",
+      save: "Save",
+      cityPlaceholder: "City",
+      namePlaceholder: "E.g.: Vacation in Europe",
+      vacation: "Vacation",
+      business: "Business",
+      weekend: "Weekend",
+      trip: "Trip",
+      other: "Other",
+      day0: "on departure day",
+      day1: "1 day",
+      day3: "3 days",
+      day7: "7 days",
+      day14: "14 days",
+      notifUnsupported: "Notifications not supported",
+      notifGranted: "Notifications enabled",
+      notifDenied: "Notifications blocked",
+      notifAsk: "Tap to enable notifications",
+      noTrips: "No upcoming trips",
+      addFirst: "Add your first!",
+      traveling: "Currently traveling!",
+      departToday: "Departing today!",
+      inPrefix: "in",
+      deleteConfirm: "Delete trip?",
+      alertNoCity: "Add at least one city with dates",
+      alertFillAll: "Fill in all fields for each city",
+      notifToday: "Today",
+      notifIn: "In",
+      storyClose: "Close",
+      storyDownload: "Download",
+      storyShare: "Share",
+      storyRoute: "Route",
+      shareTrips: "Share trips",
+      publicTrip: "Public trip (visible via link)",
+      privateLabel: "private",
+      publicLabel: "public",
+      linkCopied: "Link copied!",
+      noPublicTrips: "No public trips to share",
+      sharedView: "User's trips",
+      sharedSubtitle: "Viewing public trips",
+      openOwn: "Open your Trippa"
+    }
+  };
+
+  var CITIES_DB = {
+    ru: [
+      "Москва","Санкт-Петербург","Казань","Сочи","Калининград","Нижний Новгород",
+      "Екатеринбург","Новосибирск","Владивосток","Красноярск",
+      "Париж","Лондон","Берлин","Рим","Мадрид","Барселона","Амстердам","Прага","Вена","Будапешт",
+      "Варшава","Краков","Стамбул","Лиссабон","Дублин","Цюрих","Женева","Милан","Венеция","Флоренция",
+      "Мюнхен","Копенгаген","Осло","Стокгольм","Хельсинки","Афины","Бангкок","Токио","Сеул","Пекин",
+      "Шанхай","Сингапур","Дубай","Нью-Йорк","Лос-Анджелес","Сан-Франциско","Торонто","Сидней",
+      "Тбилиси","Батуми","Ереван","Баку","Ташкент","Самарканд","Бишкек","Алматы","Астана","Минск",
+      "Белград","Загреб","Братислава","Таллин","Рига","Вильнюс","Бухарест","София",
+      "Бали","Пхукет","Анталья","Каир","Марракеш","Кейптаун","Буэнос-Айрес","Мехико"
+    ],
+    en: [
+      "Moscow","Saint Petersburg","Kazan","Sochi","Kaliningrad","Nizhny Novgorod",
+      "Yekaterinburg","Novosibirsk","Vladivostok","Krasnoyarsk",
+      "Paris","London","Berlin","Rome","Madrid","Barcelona","Amsterdam","Prague","Vienna","Budapest",
+      "Warsaw","Krakow","Istanbul","Lisbon","Dublin","Zurich","Geneva","Milan","Venice","Florence",
+      "Munich","Copenhagen","Oslo","Stockholm","Helsinki","Athens","Bangkok","Tokyo","Seoul","Beijing",
+      "Shanghai","Singapore","Dubai","New York","Los Angeles","San Francisco","Toronto","Sydney",
+      "Tbilisi","Batumi","Yerevan","Baku","Tashkent","Samarkand","Bishkek","Almaty","Astana","Minsk",
+      "Belgrade","Zagreb","Bratislava","Tallinn","Riga","Vilnius","Bucharest","Sofia",
+      "Bali","Phuket","Antalya","Cairo","Marrakech","Cape Town","Buenos Aires","Mexico City"
+    ]
+  };
+
+  var lang = storeGet("trippa_lang") || "ru";
+
+  function t(key) { return (I18N[lang] && I18N[lang][key]) || (I18N.ru[key]) || key; }
+
+  function setLang(newLang) {
+    lang = newLang;
+    storeSet("trippa_lang", lang);
+    document.getElementById("htmlRoot").setAttribute("lang", lang);
+    applyLang();
+    updateBanner();
+    render();
+  }
+
+  function applyLang() {
+    // Toggle buttons
+    var btns = document.querySelectorAll("#langToggle button");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("active", btns[i].getAttribute("data-lang") === lang);
+    }
+    // Static elements
+    document.getElementById("tagline").innerHTML = t("tagline");
+    document.getElementById("addBtn").textContent = t("addTrip");
+    document.getElementById("upcomingTitle").textContent = t("upcoming");
+    document.getElementById("archiveTitle").textContent = t("archive");
+    document.getElementById("labelType").textContent = t("labelType");
+    document.getElementById("labelName").textContent = t("labelName");
+    document.getElementById("labelCities").textContent = t("labelCities");
+    document.getElementById("labelRemind").textContent = t("labelRemind");
+    document.getElementById("addCityBtn").textContent = t("addCity");
+    document.getElementById("cancelBtn").textContent = t("cancel");
+    document.getElementById("saveBtn").textContent = t("save");
+    document.getElementById("labelPrivacy").textContent = t("publicTrip");
+    var shareBtnText = document.getElementById("shareBtnText");
+    if (shareBtnText) shareBtnText.textContent = t("shareTrips");
+    document.getElementById("tripName").placeholder = t("namePlaceholder");
+    // Select options
+    document.getElementById("optVacation").textContent = t("vacation");
+    document.getElementById("optBusiness").textContent = t("business");
+    document.getElementById("optWeekend").textContent = t("weekend");
+    document.getElementById("optTrip").textContent = t("trip");
+    document.getElementById("optOther").textContent = t("other");
+    document.getElementById("optDay0").textContent = t("day0");
+    document.getElementById("optDay1").textContent = t("day1");
+    document.getElementById("optDay3").textContent = t("day3");
+    document.getElementById("optDay7").textContent = t("day7");
+    document.getElementById("optDay14").textContent = t("day14");
+    // City input placeholders
+    var cityInputs = document.querySelectorAll(".city-name-input");
+    for (var i = 0; i < cityInputs.length; i++) cityInputs[i].placeholder = t("cityPlaceholder");
+  }
+
+  // State
+  var trips = [];
+  var editingId = null;
+  try { var s = storeGet("trippa_data"); if (s) trips = JSON.parse(s); } catch(e) { trips = []; }
+
+  function suggest(q) {
+    if (!q) return [];
+    var lo = q.toLowerCase();
+    var cities = CITIES_DB[lang] || CITIES_DB.ru;
+    var res = [];
+    for (var i = 0; i < cities.length && res.length < 6; i++) {
+      if (cities[i].toLowerCase().indexOf(lo) === 0) res.push(cities[i]);
+    }
+    return res;
+  }
+
+  // Helpers
+  var EMOJI = { vacation:"\uD83C\uDF34", business:"\uD83D\uDCBC", weekend:"\u26FA", trip:"\uD83D\uDE97", other:"\uD83D\uDCCC" };
+
+  function esc(str) { var d = document.createElement("div"); d.textContent = str || ""; return d.innerHTML; }
+
+  function pluralDays(n) {
+    if (lang === "en") return n === 1 ? "day" : "days";
+    var a = Math.abs(n);
+    if (a % 10 === 1 && a % 100 !== 11) return "день";
+    if ([2,3,4].indexOf(a % 10) >= 0 && [12,13,14].indexOf(a % 100) < 0) return "дня";
+    return "дней";
+  }
+
+  function fmtDate(ds) {
+    if (!ds) return "";
+    var p = ds.split("-");
+    if (lang === "en") return p[1] + "/" + p[2] + "/" + p[0].slice(2);
+    return p[2] + "." + p[1] + "." + p[0].slice(2);
+  }
+
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+  function persist() { storeSet("trippa_data", JSON.stringify(trips)); }
+
+  // Service Worker & Notifications
+  var swReg = null;
+
+  function registerSW() {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").then(function(reg) {
+        swReg = reg;
+        updateBanner();
+      }).catch(function() {});
+    }
+  }
+
+  function notifOk() {
+    try { return "Notification" in window; } catch(e) { return false; }
+  }
+  function notifPerm() {
+    try { return Notification.permission; } catch(e) { return "unsupported"; }
+  }
+
+  function updateBanner() {
+    var b = document.getElementById("notifBanner");
+    var tx = document.getElementById("notifText");
+    if (!notifOk()) { tx.textContent = t("notifUnsupported"); b.className = "notif-banner denied"; return; }
+    var p = notifPerm();
+    if (p === "granted") { tx.textContent = t("notifGranted"); b.className = "notif-banner granted"; }
+    else if (p === "denied") { tx.textContent = t("notifDenied"); b.className = "notif-banner denied"; }
+    else { tx.textContent = t("notifAsk"); b.className = "notif-banner"; }
+  }
+
+  function askNotif() {
+    if (!notifOk() || notifPerm() === "granted") return;
+    try {
+      Notification.requestPermission().then(function() {
+        updateBanner();
+      });
+    } catch(e) {}
+  }
+
+  function mskHour() {
+    // Current hour in Moscow time (UTC+3)
+    var now = new Date();
+    var utcH = now.getUTCHours();
+    return (utcH + 3) % 24;
+  }
+
+  function checkNotif() {
+    try {
+      if (!notifOk() || notifPerm() !== "granted") return;
+      // Only send at 22:xx MSK (allow 22:00–22:59 window)
+      if (mskHour() !== 22) return;
+
+      var today = new Date(); today.setHours(0,0,0,0);
+      var key = today.toISOString().split("T")[0];
+      if (storeGet("trippa_notif") === key) return;
+      storeSet("trippa_notif", key);
+
+      var REMIND_DAYS = [7, 1];
+
+      // Use SW for notifications (required for iOS PWA)
+      if (swReg && swReg.active) {
+        swReg.active.postMessage({ type: "CHECK_REMINDERS", trips: trips, lang: lang });
+      } else {
+        // Fallback: direct notifications (non-PWA browsers)
+        for (var i = 0; i < trips.length; i++) {
+          var tr = trips[i];
+          if (!tr.cities || !tr.cities.length) continue;
+          var fd = new Date(tr.cities[0].dateFrom + "T00:00:00");
+          var diff = Math.ceil((fd - today) / 86400000);
+          if (REMIND_DAYS.indexOf(diff) >= 0) {
+            var msg = diff === 1 ? t("notifIn") + " 1 " + pluralDays(1) : t("notifIn") + " " + diff + " " + pluralDays(diff);
+            var names = [];
+            for (var j = 0; j < tr.cities.length; j++) names.push(tr.cities[j].name);
+            new Notification((EMOJI[tr.type] || "") + " " + tr.name, { body: msg + " \u2014 " + names.join(" \u2192 ") });
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
+  // Render
+  function render() {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var up = [], arch = [];
+
+    for (var i = 0; i < trips.length; i++) {
+      var tr = trips[i];
+      if (!tr.cities || !tr.cities.length) { arch.push(tr); continue; }
+      var last = new Date(tr.cities[tr.cities.length - 1].dateTo + "T00:00:00");
+      if (last < today) arch.push(tr); else up.push(tr);
+    }
+
+    up.sort(function(a, b) {
+      return new Date(a.cities[0].dateFrom + "T00:00:00") - new Date(b.cities[0].dateFrom + "T00:00:00");
+    });
+    arch.sort(function(a, b) {
+      return new Date(b.cities[b.cities.length-1].dateTo + "T00:00:00") - new Date(a.cities[a.cities.length-1].dateTo + "T00:00:00");
+    });
+
+    var upEl = document.getElementById("upcomingList");
+    if (up.length === 0) {
+      upEl.innerHTML = '<div class="empty-state"><div class="icon">&#128506;</div>' + esc(t("noTrips")) + '<br><span style="font-size:0.82rem;opacity:0.6">' + esc(t("addFirst")) + '</span></div>';
+    } else {
+      var h = "";
+      for (var i = 0; i < up.length; i++) h += card(up[i], today, false);
+      upEl.innerHTML = h;
+    }
+
+    var archSec = document.getElementById("archiveSection");
+    var archEl = document.getElementById("archiveList");
+    if (arch.length > 0) {
+      archSec.style.display = "";
+      var h2 = "";
+      for (var i = 0; i < arch.length; i++) h2 += card(arch[i], today, true);
+      archEl.innerHTML = h2;
+    } else {
+      archSec.style.display = "none";
+    }
+
+    bindDeletes();
+  }
+
+  function card(tr, today, isArch) {
+    var cd = "";
+    if (!isArch && tr.cities && tr.cities.length) {
+      var first = new Date(tr.cities[0].dateFrom + "T00:00:00");
+      var last = new Date(tr.cities[tr.cities.length-1].dateTo + "T00:00:00");
+      if (today >= first && today <= last) {
+        cd = '<span class="active-label">' + esc(t("traveling")) + '</span>';
+      } else {
+        var diff = Math.ceil((first - today) / 86400000);
+        if (diff === 0) cd = '<span class="active-label">' + esc(t("departToday")) + '</span>';
+        else if (diff > 0) cd = esc(t("inPrefix")) + ' <span class="days-num">' + diff + '</span> ' + esc(pluralDays(diff));
+      }
+    }
+
+    var ci = "";
+    for (var j = 0; j < (tr.cities||[]).length; j++) {
+      var c = tr.cities[j];
+      ci += '<div class="city-row"><span class="dot"></span><span class="city-name">' +
+        esc(c.name) + '</span><span class="city-dates">' +
+        fmtDate(c.dateFrom) + ' \u2014 ' + fmtDate(c.dateTo) + '</span></div>';
+    }
+
+    var typeLabel = t(tr.type);
+
+    var privBadge = tr.isPublic ? '<span class="privacy-badge">\uD83C\uDF10 ' + esc(t("publicLabel")) + '</span>' : '';
+
+    return '<div class="trip-card type-' + esc(tr.type) + '">' +
+      '<button class="story-btn" data-story="' + esc(tr.id) + '" title="Instagram Story"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>' +
+      '<button class="edit-btn" data-edit="' + esc(tr.id) + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>' +
+      '<button class="delete-btn" data-del="' + esc(tr.id) + '">\u2715</button>' +
+      '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' + privBadge +
+      '<div class="trip-name">' + esc(tr.name) + '</div>' +
+      '<div class="cities">' + ci + '</div>' +
+      (cd ? '<div class="countdown">' + cd + '</div>' : '') +
+      '</div>';
+  }
+
+  function bindDeletes() {
+    var btns = document.querySelectorAll("[data-del]");
+    for (var i = 0; i < btns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          if (confirm(t("deleteConfirm"))) {
+            var id = btn.getAttribute("data-del");
+            var next = [];
+            for (var j = 0; j < trips.length; j++) { if (trips[j].id !== id) next.push(trips[j]); }
+            trips = next;
+            persist();
+            render();
+          }
+        };
+      })(btns[i]);
+    }
+    // Edit buttons
+    var eBtns = document.querySelectorAll("[data-edit]");
+    for (var i = 0; i < eBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          openModal(btn.getAttribute("data-edit"));
+        };
+      })(eBtns[i]);
+    }
+    // Story buttons
+    var sBtns = document.querySelectorAll("[data-story]");
+    for (var i = 0; i < sBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          var id = btn.getAttribute("data-story");
+          for (var j = 0; j < trips.length; j++) {
+            if (trips[j].id === id) { generateStory(trips[j]); break; }
+          }
+        };
+      })(sBtns[i]);
+    }
+  }
+
+  // ====== Instagram Story Generator ======
+  var COLORS = {
+    vacation: { main: "#50c878", glow: "rgba(80,200,120,0.3)", bg1: "#0a1f14", bg2: "#0f1117" },
+    business: { main: "#f0a050", glow: "rgba(240,160,80,0.3)", bg1: "#1f1408", bg2: "#0f1117" },
+    weekend:  { main: "#c77dff", glow: "rgba(199,125,255,0.3)", bg1: "#1a0f27", bg2: "#0f1117" },
+    trip:     { main: "#5b8cf7", glow: "rgba(91,140,247,0.3)", bg1: "#0c1527", bg2: "#0f1117" },
+    other:    { main: "#ff6b8a", glow: "rgba(255,107,138,0.3)", bg1: "#1f0c14", bg2: "#0f1117" }
+  };
+
+  function generateStory(tr) {
+    var W = 1080, H = 1920;
+    var canvas = document.createElement("canvas");
+    canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext("2d");
+    var col = COLORS[tr.type] || COLORS.trip;
+
+    // Background gradient
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, col.bg1);
+    grad.addColorStop(0.5, col.bg2);
+    grad.addColorStop(1, col.bg1);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle decorative circles
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = col.main;
+    ctx.beginPath(); ctx.arc(W * 0.85, H * 0.12, 300, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W * 0.1, H * 0.85, 250, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Top decorative line
+    ctx.save();
+    ctx.strokeStyle = col.main;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, 160); ctx.lineTo(W - 80, 160);
+    ctx.stroke();
+    ctx.restore();
+
+    // Emoji + Type badge
+    var emoji = EMOJI[tr.type] || "";
+    var typeLabel = t(tr.type).toUpperCase();
+    ctx.font = "600 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+    ctx.fillStyle = col.main;
+    ctx.globalAlpha = 0.8;
+    ctx.textAlign = "center";
+    ctx.fillText(emoji + "  " + typeLabel, W / 2, 230);
+    ctx.globalAlpha = 1;
+
+    // Trip name
+    ctx.font = "400 72px Georgia, 'Times New Roman', serif";
+    ctx.fillStyle = "#e8eaf0";
+    ctx.textAlign = "center";
+    // Word wrap for long names
+    var nameWords = tr.name.split(" ");
+    var nameLines = [];
+    var currentLine = "";
+    for (var i = 0; i < nameWords.length; i++) {
+      var test = currentLine ? currentLine + " " + nameWords[i] : nameWords[i];
+      if (ctx.measureText(test).width > W - 160) {
+        if (currentLine) nameLines.push(currentLine);
+        currentLine = nameWords[i];
+      } else {
+        currentLine = test;
+      }
+    }
+    if (currentLine) nameLines.push(currentLine);
+
+    var nameY = 320;
+    for (var i = 0; i < nameLines.length; i++) {
+      ctx.fillText(nameLines[i], W / 2, nameY + i * 88);
+    }
+    var afterNameY = nameY + nameLines.length * 88 + 40;
+
+    // Date range
+    var cities = tr.cities || [];
+    if (cities.length) {
+      var fullFrom = fmtDate(cities[0].dateFrom);
+      var fullTo = fmtDate(cities[cities.length - 1].dateTo);
+      ctx.font = "300 36px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+      ctx.fillStyle = "#8b90a5";
+      ctx.fillText(fullFrom + "  —  " + fullTo, W / 2, afterNameY);
+    }
+
+    // Route section
+    var routeStartY = afterNameY + 100;
+    var routeX = 200;
+    var dotR = 14;
+    var stepH = Math.min(160, (H - routeStartY - 350) / Math.max(cities.length, 1));
+
+    // Route line (full)
+    if (cities.length > 1) {
+      ctx.save();
+      ctx.strokeStyle = col.main;
+      ctx.globalAlpha = 0.2;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(routeX, routeStartY);
+      ctx.lineTo(routeX, routeStartY + (cities.length - 1) * stepH);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Cities
+    for (var i = 0; i < cities.length; i++) {
+      var cy = routeStartY + i * stepH;
+      var c = cities[i];
+
+      // Glow behind dot
+      ctx.save();
+      ctx.fillStyle = col.glow;
+      ctx.beginPath(); ctx.arc(routeX, cy, dotR + 10, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Dot
+      ctx.fillStyle = col.main;
+      ctx.beginPath(); ctx.arc(routeX, cy, dotR, 0, Math.PI * 2); ctx.fill();
+
+      // Inner dot
+      ctx.fillStyle = "#0f1117";
+      ctx.beginPath(); ctx.arc(routeX, cy, dotR - 5, 0, Math.PI * 2); ctx.fill();
+
+      // City name
+      ctx.font = "500 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+      ctx.fillStyle = "#e8eaf0";
+      ctx.textAlign = "left";
+      ctx.fillText(c.name, routeX + 50, cy + 6);
+
+      // City dates
+      ctx.font = "300 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+      ctx.fillStyle = "#8b90a5";
+      ctx.fillText(fmtDate(c.dateFrom) + " — " + fmtDate(c.dateTo), routeX + 50, cy + 46);
+    }
+
+    // Arrow connectors between cities
+    if (cities.length > 1) {
+      for (var i = 0; i < cities.length - 1; i++) {
+        var y1 = routeStartY + i * stepH + dotR + 12;
+        var y2 = routeStartY + (i + 1) * stepH - dotR - 12;
+        ctx.save();
+        ctx.strokeStyle = col.main;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(routeX, y1);
+        ctx.lineTo(routeX, y2);
+        ctx.stroke();
+        // Small arrow
+        ctx.fillStyle = col.main;
+        ctx.beginPath();
+        ctx.moveTo(routeX - 6, y2 - 4);
+        ctx.lineTo(routeX + 6, y2 - 4);
+        ctx.lineTo(routeX, y2 + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Bottom decorative line
+    ctx.save();
+    ctx.strokeStyle = col.main;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, H - 200); ctx.lineTo(W - 80, H - 200);
+    ctx.stroke();
+    ctx.restore();
+
+    // Trippa branding
+    ctx.font = "400 48px Georgia, 'Times New Roman', serif";
+    ctx.fillStyle = col.main;
+    ctx.globalAlpha = 0.6;
+    ctx.textAlign = "center";
+    ctx.fillText("Trippa", W / 2, H - 130);
+    ctx.globalAlpha = 1;
+
+    // Show preview
+    showStoryPreview(canvas);
+  }
+
+  function showStoryPreview(canvas) {
+    var overlay = document.getElementById("storyOverlay");
+    var preview = document.getElementById("storyPreview");
+    preview.innerHTML = "";
+    preview.appendChild(canvas);
+    document.getElementById("storyCloseBtn").textContent = t("storyClose");
+    document.getElementById("storyDownloadBtn").textContent = t("storyDownload");
+    overlay.classList.add("open");
+
+    // Store canvas reference for download
+    overlay._canvas = canvas;
+  }
+
+  function closeStoryOverlay() {
+    document.getElementById("storyOverlay").classList.remove("open");
+  }
+
+  function downloadStory() {
+    var overlay = document.getElementById("storyOverlay");
+    var canvas = overlay._canvas;
+    if (!canvas) return;
+
+    // Try Web Share API first (mobile), fallback to download
+    if (navigator.share && navigator.canShare) {
+      canvas.toBlob(function(blob) {
+        var file = new File([blob], "trippa-story.png", { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file] }).catch(function() {});
+          return;
+        }
+        triggerDownload(canvas);
+      }, "image/png");
+    } else {
+      triggerDownload(canvas);
+    }
+  }
+
+  function triggerDownload(canvas) {
+    var a = document.createElement("a");
+    a.download = "trippa-story.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  }
+
+  // Modal
+  function openModal(id) {
+    editingId = id || null;
+    document.getElementById("modalTitle").textContent = id ? t("editTrip") : t("newTrip");
+    document.getElementById("citiesContainer").innerHTML = "";
+
+    if (id) {
+      var tr = null;
+      for (var i = 0; i < trips.length; i++) { if (trips[i].id === id) { tr = trips[i]; break; } }
+      if (tr) {
+        document.getElementById("tripType").value = tr.type;
+        document.getElementById("tripName").value = tr.name;
+        document.getElementById("notifDays").value = tr.notifDays || 1;
+        document.getElementById("tripPublic").checked = !!tr.isPublic;
+        for (var j = 0; j < tr.cities.length; j++) addCityRow(tr.cities[j].name, tr.cities[j].dateFrom, tr.cities[j].dateTo);
+      }
+    } else {
+      document.getElementById("tripType").value = "vacation";
+      document.getElementById("tripName").value = "";
+      document.getElementById("notifDays").value = "1";
+      document.getElementById("tripPublic").checked = false;
+      addCityRow("", "", "");
+    }
+    document.getElementById("modalOverlay").classList.add("open");
+  }
+
+  function closeModal() {
+    document.getElementById("modalOverlay").classList.remove("open");
+    editingId = null;
+  }
+
+  function addCityRow(name, dateFrom, dateTo) {
+    var container = document.getElementById("citiesContainer");
+    var row = document.createElement("div");
+    row.className = "city-input-row";
+
+    var wrap = document.createElement("div");
+    wrap.className = "suggest-wrapper";
+    var inp = document.createElement("input");
+    inp.type = "text"; inp.placeholder = t("cityPlaceholder"); inp.value = name || "";
+    inp.className = "city-name-input"; inp.autocomplete = "off";
+    var sl = document.createElement("div");
+    sl.className = "suggest-list";
+    wrap.appendChild(inp);
+    wrap.appendChild(sl);
+
+    var fi = document.createElement("input"); fi.type = "date"; fi.className = "city-from"; fi.value = dateFrom || "";
+    var ti = document.createElement("input"); ti.type = "date"; ti.className = "city-to"; ti.value = dateTo || "";
+
+    var rb = document.createElement("button"); rb.className = "remove-city-btn"; rb.textContent = "\u2715";
+    rb.addEventListener("click", function() { row.remove(); });
+
+    row.appendChild(wrap); row.appendChild(fi); row.appendChild(ti); row.appendChild(rb);
+    container.appendChild(row);
+
+    // Suggestions
+    inp.addEventListener("input", function() {
+      var res = suggest(inp.value);
+      if (!res.length) { sl.classList.remove("open"); return; }
+      var html = "";
+      for (var k = 0; k < res.length; k++) html += '<div class="suggest-item">' + esc(res[k]) + '</div>';
+      sl.innerHTML = html;
+      sl.classList.add("open");
+    });
+    inp.addEventListener("blur", function() { setTimeout(function() { sl.classList.remove("open"); }, 200); });
+    inp.addEventListener("focus", function() { if (inp.value) inp.dispatchEvent(new Event("input")); });
+    sl.addEventListener("click", function(e) {
+      if (e.target.classList.contains("suggest-item")) {
+        inp.value = e.target.textContent;
+        sl.classList.remove("open");
+      }
+    });
+
+    // Auto-fill dateFrom from previous row
+    var rows = container.querySelectorAll(".city-input-row");
+    if (rows.length > 1 && !dateFrom) {
+      var prev = rows[rows.length - 2].querySelector(".city-to");
+      if (prev && prev.value) fi.value = prev.value;
+    }
+  }
+
+  function saveTrip() {
+    var name = document.getElementById("tripName").value.trim();
+    var type = document.getElementById("tripType").value;
+    var nd = parseInt(document.getElementById("notifDays").value, 10);
+    var isPublic = document.getElementById("tripPublic").checked;
+    if (!name) { document.getElementById("tripName").focus(); return; }
+
+    var rows = document.querySelectorAll("#citiesContainer .city-input-row");
+    var cities = [], valid = true;
+    for (var i = 0; i < rows.length; i++) {
+      var cn = rows[i].querySelector(".city-name-input").value.trim();
+      var cf = rows[i].querySelector(".city-from").value;
+      var ct = rows[i].querySelector(".city-to").value;
+      if (cn && cf && ct) cities.push({ name: cn, dateFrom: cf, dateTo: ct });
+      else if (cn || cf || ct) valid = false;
+    }
+    if (!cities.length) { alert(t("alertNoCity")); return; }
+    if (!valid) { alert(t("alertFillAll")); return; }
+
+    if (editingId) {
+      for (var i = 0; i < trips.length; i++) {
+        if (trips[i].id === editingId) {
+          trips[i].name = name; trips[i].type = type;
+          trips[i].cities = cities; trips[i].notifDays = nd;
+          trips[i].isPublic = isPublic;
+          break;
+        }
+      }
+    } else {
+      trips.push({ id: genId(), name: name, type: type, cities: cities, notifDays: nd, isPublic: isPublic });
+    }
+    persist(); closeModal(); render();
+  }
+
+  // ====== Sharing ======
+  function showToast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(function() { el.classList.remove("show"); }, 2500);
+  }
+
+  function generateShareLink() {
+    var publicTrips = [];
+    for (var i = 0; i < trips.length; i++) {
+      if (trips[i].isPublic) {
+        publicTrips.push({
+          name: trips[i].name,
+          type: trips[i].type,
+          cities: trips[i].cities
+        });
+      }
+    }
+    if (!publicTrips.length) {
+      showToast(t("noPublicTrips"));
+      return;
+    }
+    var data = JSON.stringify(publicTrips);
+    var encoded = btoa(unescape(encodeURIComponent(data)));
+    var url = location.origin + location.pathname + "#shared=" + encoded;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function() {
+        showToast(t("linkCopied"));
+      }).catch(function() {
+        prompt(t("linkCopied"), url);
+      });
+    } else {
+      prompt(t("linkCopied"), url);
+    }
+  }
+
+  // Shared view mode
+  var isSharedView = false;
+  var sharedTrips = [];
+
+  function checkSharedView() {
+    var hash = location.hash;
+    if (hash.indexOf("#shared=") !== 0) return false;
+    var encoded = hash.substring(8);
+    try {
+      var json = decodeURIComponent(escape(atob(encoded)));
+      sharedTrips = JSON.parse(json);
+      if (!Array.isArray(sharedTrips)) return false;
+      isSharedView = true;
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function renderSharedView() {
+    // Hide controls not needed in shared view
+    document.getElementById("addBtn").style.display = "none";
+    document.getElementById("shareBtn").style.display = "none";
+    document.getElementById("notifBanner").style.display = "none";
+
+    // Add shared banner
+    var container = document.querySelector(".container");
+    var banner = document.createElement("div");
+    banner.className = "shared-banner";
+    banner.innerHTML = '<div class="shared-title">' + esc(t("sharedView")) + '</div>' +
+      '<div class="shared-subtitle">' + esc(t("sharedSubtitle")) + '</div>' +
+      '<a class="own-link" href="' + location.origin + location.pathname + '">' + esc(t("openOwn")) + '</a>';
+    container.insertBefore(banner, document.getElementById("upcomingSection"));
+
+    // Render shared trips
+    var today = new Date(); today.setHours(0,0,0,0);
+    var up = [], arch = [];
+
+    for (var i = 0; i < sharedTrips.length; i++) {
+      var tr = sharedTrips[i];
+      if (!tr.cities || !tr.cities.length) { arch.push(tr); continue; }
+      var last = new Date(tr.cities[tr.cities.length - 1].dateTo + "T00:00:00");
+      if (last < today) arch.push(tr); else up.push(tr);
+    }
+
+    up.sort(function(a, b) {
+      return new Date(a.cities[0].dateFrom + "T00:00:00") - new Date(b.cities[0].dateFrom + "T00:00:00");
+    });
+
+    var upEl = document.getElementById("upcomingList");
+    if (up.length === 0) {
+      upEl.innerHTML = '<div class="empty-state"><div class="icon">&#128506;</div>' + esc(t("noTrips")) + '</div>';
+    } else {
+      var h = "";
+      for (var i = 0; i < up.length; i++) h += sharedCard(up[i], today);
+      upEl.innerHTML = h;
+    }
+
+    var archSec = document.getElementById("archiveSection");
+    var archEl = document.getElementById("archiveList");
+    if (arch.length > 0) {
+      archSec.style.display = "";
+      var h2 = "";
+      for (var i = 0; i < arch.length; i++) h2 += sharedCard(arch[i], today);
+      archEl.innerHTML = h2;
+    } else {
+      archSec.style.display = "none";
+    }
+  }
+
+  function sharedCard(tr, today) {
+    var cd = "";
+    if (tr.cities && tr.cities.length) {
+      var first = new Date(tr.cities[0].dateFrom + "T00:00:00");
+      var last = new Date(tr.cities[tr.cities.length-1].dateTo + "T00:00:00");
+      if (today >= first && today <= last) {
+        cd = '<span class="active-label">' + esc(t("traveling")) + '</span>';
+      } else {
+        var diff = Math.ceil((first - today) / 86400000);
+        if (diff === 0) cd = '<span class="active-label">' + esc(t("departToday")) + '</span>';
+        else if (diff > 0) cd = esc(t("inPrefix")) + ' <span class="days-num">' + diff + '</span> ' + esc(pluralDays(diff));
+      }
+    }
+
+    var ci = "";
+    for (var j = 0; j < (tr.cities||[]).length; j++) {
+      var c = tr.cities[j];
+      ci += '<div class="city-row"><span class="dot"></span><span class="city-name">' +
+        esc(c.name) + '</span><span class="city-dates">' +
+        fmtDate(c.dateFrom) + ' \u2014 ' + fmtDate(c.dateTo) + '</span></div>';
+    }
+
+    var typeLabel = t(tr.type);
+
+    return '<div class="trip-card type-' + esc(tr.type) + '">' +
+      '<span class="type-badge">' + (EMOJI[tr.type]||"") + ' ' + esc(typeLabel) + '</span>' +
+      '<div class="trip-name">' + esc(tr.name) + '</div>' +
+      '<div class="cities">' + ci + '</div>' +
+      (cd ? '<div class="countdown">' + cd + '</div>' : '') +
+      '</div>';
+  }
+
+  // Event bindings
+  document.getElementById("notifBanner").addEventListener("click", askNotif);
+  document.getElementById("addBtn").addEventListener("click", function() { openModal(null); });
+  document.getElementById("addCityBtn").addEventListener("click", function() { addCityRow("","",""); });
+  document.getElementById("cancelBtn").addEventListener("click", closeModal);
+  document.getElementById("saveBtn").addEventListener("click", saveTrip);
+  document.getElementById("modalOverlay").addEventListener("click", function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.getElementById("modalBox").addEventListener("click", function(e) { e.stopPropagation(); });
+
+  // Story overlay
+  document.getElementById("storyCloseBtn").addEventListener("click", closeStoryOverlay);
+  document.getElementById("storyDownloadBtn").addEventListener("click", downloadStory);
+  document.getElementById("storyOverlay").addEventListener("click", function(e) {
+    if (e.target === this) closeStoryOverlay();
+  });
+
+  // Share button
+  document.getElementById("shareBtn").addEventListener("click", generateShareLink);
+
+  // Language toggle
+  document.getElementById("langToggle").addEventListener("click", function(e) {
+    var btn = e.target;
+    if (btn.tagName === "BUTTON" && btn.getAttribute("data-lang")) {
+      setLang(btn.getAttribute("data-lang"));
+    }
+  });
+
+  // Init
+  if (checkSharedView()) {
+    applyLang();
+    renderSharedView();
+  } else {
+    registerSW();
+    applyLang();
+    updateBanner();
+    render();
+    try { checkNotif(); } catch(e) {}
+    try { setInterval(checkNotif, 1800000); } catch(e) {}  // check every 30 min
+  }
+
+})();
+</script>
+
+</body>
+</html>
