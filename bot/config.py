@@ -12,5 +12,13 @@ if _env_path.exists():
                 os.environ.setdefault(_key.strip(), _val.strip())
 
 BOT_TOKEN = os.environ.get("TRIPPA_BOT_TOKEN", "")
-DATA_DIR = os.environ.get("TRIPPA_DATA_DIR", os.path.join(os.path.dirname(__file__), "data"))
+
+# On Railway, volumes are mounted at a fixed path (e.g. /data).
+# Default to /data when running on Railway, otherwise use local bot/data/.
+_default_data_dir = os.path.join(os.path.dirname(__file__), "data")
+if os.environ.get("RAILWAY_ENVIRONMENT") and os.path.isdir("/data"):
+    _default_data_dir = "/data"
+
+DATA_DIR = os.environ.get("TRIPPA_DATA_DIR", _default_data_dir)
+
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")

@@ -29,7 +29,7 @@ from telegram.ext import (
     filters,
 )
 
-from config import BOT_TOKEN
+from config import BOT_TOKEN, DATA_DIR
 from datepicker import DatePicker
 import storage
 import voice
@@ -1756,6 +1756,7 @@ async def run() -> None:
         await bot_app.start()
         await site.start()
         logger.info("Trippa bot is running...")
+        logger.info("Data directory: %s", DATA_DIR)
         logger.info("Web API listening on port %d", web_port)
 
         # Schedule daily reminders at 22:00 MSK (19:00 UTC)
