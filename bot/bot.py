@@ -143,6 +143,15 @@ def _html(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _parse_callback(data: str, min_parts: int) -> list[str] | None:
+    """Split callback data and validate minimum number of parts."""
+    parts = data.split(":")
+    if len(parts) < min_parts:
+        logger.warning("Malformed callback data: %s", data)
+        return None
+    return parts
+
+
 # ── Calendar helpers ─────────────────────────────────────────────────────
 
 def build_month_keyboard(year: int, month: int, prefix: str) -> InlineKeyboardMarkup:
@@ -191,6 +200,7 @@ def shift_month(year: int, month: int, direction: int):
 # ── Command Handlers ─────────────────────────────────────────────────────
 
 async def cmd_start(update: Update, context) -> None:
+    logger.info("User %s started bot", update.effective_user.id)
     user = update.effective_user
     await update.message.reply_text(
         f"🌍 Привет, {_html(user.first_name)}!\n\n"
@@ -255,13 +265,14 @@ async def cmd_trips(update: Update, context) -> None:
         key=lambda t: t.get("cities", [{}])[0].get("dateFrom", "9999-99-99")
     )
 
-    # Send each trip as a separate message with its own delete button
+    # Send each trip as a separate message with edit/delete buttons
     if upcoming:
         await update.message.reply_text(
             "📋 <b>Предстоящие:</b>", parse_mode="HTML",
         )
         for tr in upcoming:
             kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("✏️ Изменить", callback_data=f"edit:{tr['id']}"),
                 InlineKeyboardButton("🗑 Удалить", callback_data=f"del:{tr['id']}"),
             ]])
             await update.message.reply_text(
@@ -274,6 +285,7 @@ async def cmd_trips(update: Update, context) -> None:
         )
         for tr in archive:
             kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("✏️ Изменить", callback_data=f"edit:{tr['id']}"),
                 InlineKeyboardButton("🗑 Удалить", callback_data=f"del:{tr['id']}"),
             ]])
             await update.message.reply_text(
@@ -293,7 +305,14 @@ async def new_start(update: Update, context) -> int:
 
 
 async def new_name(update: Update, context) -> int:
-    context.user_data["new_trip"]["name"] = update.message.text.strip()
+    name = update.message.text.strip()
+    if not name:
+        await update.message.reply_text("Название не может быть пустым. Введите название:")
+        return NAME
+    if len(name) > 100:
+        await update.message.reply_text("Слишком длинное название (макс. 100). Попробуйте короче:")
+        return NAME
+    context.user_data["new_trip"]["name"] = name
 
     keyboard = [
         [
@@ -317,7 +336,10 @@ async def new_name(update: Update, context) -> int:
 async def new_type(update: Update, context) -> int:
     query = update.callback_query
     await query.answer()
-    trip_type = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return TYPE
+    trip_type = parts[1]
     context.user_data["new_trip"]["type"] = trip_type
     label = TYPE_LABELS.get(trip_type, trip_type)
     await query.edit_message_text(f"Тип: {EMOJI.get(trip_type, '')} {label}")
@@ -358,7 +380,14 @@ async def new_city_pick(update: Update, context) -> int:
 
 
 async def new_city_name(update: Update, context) -> int:
-    city = {"name": update.message.text.strip()}
+    name = update.message.text.strip()
+    if not name:
+        await update.message.reply_text("Название города не может быть пустым. Введите название:")
+        return CITY_NAME
+    if len(name) > 100:
+        await update.message.reply_text("Слишком длинное название (макс. 100). Попробуйте короче:")
+        return CITY_NAME
+    city = {"name": name}
     context.user_data["current_city"] = city
     await _send_calendar(update.message, context, "from", "📅 Дата заезда:")
     return CITY_FROM
@@ -386,24 +415,34 @@ async def cal_from_callback(update: Update, context) -> int:
     """Handle calendar navigation and day selection for dateFrom."""
     query = update.callback_query
     await query.answer()
-    parts = query.data.split(":")
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return CITY_FROM
 
     action = parts[1]
     if action == "noop":
         return CITY_FROM
 
-    if action in ("prev", "next"):
-        year, month = int(parts[2]), int(parts[3])
+    if action in ("prev", "next") and len(parts) >= 4:
+        try:
+            year, month = int(parts[2]), int(parts[3])
+        except ValueError:
+            return CITY_FROM
         year, month = shift_month(year, month, -1 if action == "prev" else 1)
         kb = build_month_keyboard(year, month, "from")
         await query.edit_message_reply_markup(reply_markup=kb)
         return CITY_FROM
 
-    if action == "day":
-        year, month, day = int(parts[2]), int(parts[3]), int(parts[4])
-        ds = f"{year}-{month:02d}-{day:02d}"
+    if action == "day" and len(parts) >= 5:
+        try:
+            year, month, day = int(parts[2]), int(parts[3]), int(parts[4])
+            d = date(year, month, day)
+        except ValueError:
+            await query.edit_message_text("Некорректная дата. Попробуйте ещё раз.")
+            await _send_calendar(query.message, context, "from", "📅 Дата заезда:")
+            return CITY_FROM
+        ds = d.strftime("%Y-%m-%d")
         context.user_data["current_city"]["dateFrom"] = ds
-        d = date(year, month, day)
         await query.edit_message_text(f"📅 Заезд: {d.strftime('%d.%m.%Y')}")
         await _send_calendar(query.message, context, "to", "📅 Дата выезда:")
         return CITY_TO
@@ -426,27 +465,46 @@ async def cal_to_callback(update: Update, context) -> int:
     """Handle calendar navigation and day selection for dateTo."""
     query = update.callback_query
     await query.answer()
-    parts = query.data.split(":")
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return CITY_TO
 
     action = parts[1]
     if action == "noop":
         return CITY_TO
 
-    if action in ("prev", "next"):
-        year, month = int(parts[2]), int(parts[3])
+    if action in ("prev", "next") and len(parts) >= 4:
+        try:
+            year, month = int(parts[2]), int(parts[3])
+        except ValueError:
+            return CITY_TO
         year, month = shift_month(year, month, -1 if action == "prev" else 1)
         kb = build_month_keyboard(year, month, "to")
         await query.edit_message_reply_markup(reply_markup=kb)
         return CITY_TO
 
-    if action == "day":
-        year, month, day = int(parts[2]), int(parts[3]), int(parts[4])
-        ds = f"{year}-{month:02d}-{day:02d}"
+    if action == "day" and len(parts) >= 5:
+        try:
+            year, month, day = int(parts[2]), int(parts[3]), int(parts[4])
+            d = date(year, month, day)
+        except ValueError:
+            await query.edit_message_text("Некорректная дата. Попробуйте ещё раз.")
+            await _send_calendar(query.message, context, "to", "📅 Дата выезда:")
+            return CITY_TO
+        ds = d.strftime("%Y-%m-%d")
         city = context.user_data["current_city"]
+        # Validate dateFrom <= dateTo
+        date_from = city.get("dateFrom", "")
+        if date_from and ds < date_from:
+            from_fmt = fmt_date(date_from)
+            await query.edit_message_text(
+                f"Дата выезда раньше даты заезда ({from_fmt}). Выберите другую дату."
+            )
+            await _send_calendar(query.message, context, "to", "📅 Дата выезда:")
+            return CITY_TO
         city["dateTo"] = ds
         context.user_data["new_trip"]["cities"].append(city)
 
-        d = date(year, month, day)
         await query.edit_message_text(f"📅 Выезд: {d.strftime('%d.%m.%Y')}")
         return await _ask_more_cities(query.message, context)
 
@@ -461,6 +519,13 @@ async def new_city_to(update: Update, context) -> int:
         return CITY_TO
 
     city = context.user_data["current_city"]
+    date_from = city.get("dateFrom", "")
+    if date_from and ds < date_from:
+        from_fmt = fmt_date(date_from)
+        await update.message.reply_text(
+            f"Дата выезда раньше даты заезда ({from_fmt}). Выберите другую дату:"
+        )
+        return CITY_TO
     city["dateTo"] = ds
     context.user_data["new_trip"]["cities"].append(city)
     return await _ask_more_cities(update.message, context)
@@ -486,7 +551,10 @@ async def _ask_more_cities(message, context) -> int:
 async def new_more_cities(update: Update, context) -> int:
     query = update.callback_query
     await query.answer()
-    choice = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return MORE_CITIES
+    choice = parts[1]
 
     if choice == "yes":
         await query.edit_message_text(query.message.text)
@@ -515,6 +583,7 @@ async def new_more_cities(update: Update, context) -> int:
 
 
 async def new_cancel(update: Update, context) -> int:
+    logger.info("User %s cancelled trip creation", update.effective_user.id)
     context.user_data.pop("new_trip", None)
     context.user_data.pop("current_city", None)
     await update.message.reply_text(
@@ -583,13 +652,248 @@ async def cmd_delete(update: Update, context) -> None:
 async def delete_callback(update: Update, context) -> None:
     query = update.callback_query
     await query.answer()
-    trip_id = query.data.split(":")[1]
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return
+    trip_id = parts[1]
     user_id = update.effective_user.id
 
     if storage.delete_trip(user_id, trip_id):
         await query.edit_message_text("🗑 Поездка удалена.")
     else:
         await query.edit_message_text("Поездка не найдена.")
+
+
+# ── Edit Trip ────────────────────────────────────────────────────────────
+
+# Conversation states for rename flow
+EDIT_RENAME = 100
+
+
+async def edit_callback(update: Update, context) -> None:
+    """Show edit menu for a trip."""
+    query = update.callback_query
+    await query.answer()
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return
+    trip_id = parts[1]
+    user_id = update.effective_user.id
+    trips = storage.load_trips(user_id)
+    trip = next((t for t in trips if t["id"] == trip_id), None)
+    if not trip:
+        await query.edit_message_text("Поездка не найдена.")
+        return
+
+    keyboard = [
+        [InlineKeyboardButton("✏️ Переименовать", callback_data=f"editname:{trip_id}")],
+        [InlineKeyboardButton(f"{EMOJI.get(trip['type'], '')} Сменить тип", callback_data=f"edittype:{trip_id}")],
+    ]
+    cities = trip.get("cities", [])
+    if cities:
+        keyboard.append([
+            InlineKeyboardButton("🏙 Удалить город", callback_data=f"editcities:{trip_id}"),
+        ])
+    keyboard.append([InlineKeyboardButton("◀ Назад", callback_data=f"editback:{trip_id}")])
+
+    await query.edit_message_text(
+        f"{fmt_trip(trip)}\n\n<b>Что изменить?</b>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+
+async def edit_back_callback(update: Update, context) -> None:
+    """Return from edit menu to trip view with edit/delete buttons."""
+    query = update.callback_query
+    await query.answer()
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return
+    trip_id = parts[1]
+    user_id = update.effective_user.id
+    trips = storage.load_trips(user_id)
+    trip = next((t for t in trips if t["id"] == trip_id), None)
+    if not trip:
+        await query.edit_message_text("Поездка не найдена.")
+        return
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton("✏️ Изменить", callback_data=f"edit:{trip_id}"),
+        InlineKeyboardButton("🗑 Удалить", callback_data=f"del:{trip_id}"),
+    ]])
+    await query.edit_message_text(fmt_trip(trip), parse_mode="HTML", reply_markup=kb)
+
+
+async def edit_type_callback(update: Update, context) -> None:
+    """Show type selection for editing."""
+    query = update.callback_query
+    await query.answer()
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return
+    trip_id = parts[1]
+    keyboard = [
+        [
+            InlineKeyboardButton(f"{EMOJI['vacation']} Отпуск", callback_data=f"edittypeset:{trip_id}:vacation"),
+            InlineKeyboardButton(f"{EMOJI['business']} Командировка", callback_data=f"edittypeset:{trip_id}:business"),
+        ],
+        [
+            InlineKeyboardButton(f"{EMOJI['weekend']} Выходные", callback_data=f"edittypeset:{trip_id}:weekend"),
+            InlineKeyboardButton(f"{EMOJI['trip']} Поездка", callback_data=f"edittypeset:{trip_id}:trip"),
+        ],
+        [
+            InlineKeyboardButton(f"{EMOJI['other']} Другое", callback_data=f"edittypeset:{trip_id}:other"),
+        ],
+    ]
+    await query.edit_message_text(
+        "Выберите новый тип:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+
+async def edit_type_set_callback(update: Update, context) -> None:
+    """Apply new trip type."""
+    query = update.callback_query
+    await query.answer()
+    parts = _parse_callback(query.data, 3)
+    if parts is None:
+        return
+    trip_id, new_type = parts[1], parts[2]
+    user_id = update.effective_user.id
+    trip = storage.update_trip(user_id, trip_id, {"type": new_type})
+    if trip:
+        label = TYPE_LABELS.get(new_type, new_type)
+        await query.edit_message_text(
+            f"Тип изменён на {EMOJI.get(new_type, '')} {label}.\n\n{fmt_trip(trip)}",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("✏️ Изменить", callback_data=f"edit:{trip_id}"),
+                InlineKeyboardButton("🗑 Удалить", callback_data=f"del:{trip_id}"),
+            ]]),
+        )
+    else:
+        await query.edit_message_text("Поездка не найдена.")
+
+
+async def edit_cities_callback(update: Update, context) -> None:
+    """Show city list for removal."""
+    query = update.callback_query
+    await query.answer()
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return
+    trip_id = parts[1]
+    user_id = update.effective_user.id
+    trips = storage.load_trips(user_id)
+    trip = next((t for t in trips if t["id"] == trip_id), None)
+    if not trip:
+        await query.edit_message_text("Поездка не найдена.")
+        return
+
+    cities = trip.get("cities", [])
+    if not cities:
+        await query.edit_message_text("В поездке нет городов.")
+        return
+
+    keyboard = []
+    for i, c in enumerate(cities):
+        label = f"{c['name']} ({fmt_date(c.get('dateFrom', ''))} — {fmt_date(c.get('dateTo', ''))})"
+        keyboard.append([InlineKeyboardButton(f"🗑 {label}", callback_data=f"editrmcity:{trip_id}:{i}")])
+    keyboard.append([InlineKeyboardButton("◀ Назад", callback_data=f"edit:{trip_id}")])
+
+    await query.edit_message_text(
+        "Какой город удалить?",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+
+async def edit_remove_city_callback(update: Update, context) -> None:
+    """Remove a city from a trip."""
+    query = update.callback_query
+    await query.answer()
+    parts = _parse_callback(query.data, 3)
+    if parts is None:
+        return
+    trip_id = parts[1]
+    try:
+        city_index = int(parts[2])
+    except ValueError:
+        return
+    user_id = update.effective_user.id
+    trip = storage.remove_city_from_trip(user_id, trip_id, city_index)
+    if trip:
+        await query.edit_message_text(
+            f"Город удалён.\n\n{fmt_trip(trip)}",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("✏️ Изменить", callback_data=f"edit:{trip_id}"),
+                InlineKeyboardButton("🗑 Удалить", callback_data=f"del:{trip_id}"),
+            ]]),
+        )
+    else:
+        await query.edit_message_text("Поездка или город не найдены.")
+
+
+async def edit_name_start(update: Update, context) -> int:
+    """Start the rename flow."""
+    query = update.callback_query
+    await query.answer()
+    parts = _parse_callback(query.data, 2)
+    if parts is None:
+        return ConversationHandler.END
+    context.user_data["edit_trip_id"] = parts[1]
+    await query.edit_message_text("Введите новое название поездки:")
+    return EDIT_RENAME
+
+
+async def edit_name_done(update: Update, context) -> int:
+    """Apply the new trip name."""
+    name = update.message.text.strip()
+    if not name:
+        await update.message.reply_text("Название не может быть пустым. Введите название:")
+        return EDIT_RENAME
+    if len(name) > 100:
+        await update.message.reply_text("Слишком длинное (макс. 100). Попробуйте короче:")
+        return EDIT_RENAME
+
+    trip_id = context.user_data.pop("edit_trip_id", None)
+    if not trip_id:
+        await update.message.reply_text("Ошибка. Попробуйте ещё раз.", reply_markup=main_keyboard())
+        return ConversationHandler.END
+
+    user_id = update.effective_user.id
+    trip = storage.update_trip(user_id, trip_id, {"name": name})
+    if trip:
+        await update.message.reply_text(
+            f"Название изменено.\n\n{fmt_trip(trip)}",
+            parse_mode="HTML",
+            reply_markup=main_keyboard(),
+        )
+    else:
+        await update.message.reply_text("Поездка не найдена.", reply_markup=main_keyboard())
+    return ConversationHandler.END
+
+
+async def edit_name_cancel(update: Update, context) -> int:
+    """Cancel rename."""
+    context.user_data.pop("edit_trip_id", None)
+    await update.message.reply_text("Переименование отменено.", reply_markup=main_keyboard())
+    return ConversationHandler.END
+
+
+# ── Error handler ────────────────────────────────────────────────────────
+
+async def error_handler(update: object, context) -> None:
+    """Log errors and notify the user."""
+    logger.error("Unhandled exception:", exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message:
+        try:
+            await update.effective_message.reply_text(
+                "Произошла ошибка. Попробуйте ещё раз или напишите /start.",
+                reply_markup=main_keyboard(),
+            )
+        except Exception:
+            logger.error("Failed to send error message to user", exc_info=True)
 
 
 # ── Post-init: set commands & menu button ────────────────────────────────
@@ -651,7 +955,25 @@ def main() -> None:
         per_message=False,
     )
 
+    # Conversation for renaming a trip
+    rename_handler = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(edit_name_start, pattern=r"^editname:"),
+        ],
+        states={
+            EDIT_RENAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Text(MENU_BUTTONS), edit_name_done),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", edit_name_cancel),
+            MessageHandler(filters.Text([BTN_CANCEL]), edit_name_cancel),
+        ],
+        per_message=False,
+    )
+
     app.add_handler(conv_handler)
+    app.add_handler(rename_handler)
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("trips", cmd_trips))
@@ -660,7 +982,16 @@ def main() -> None:
     app.add_handler(MessageHandler(filters.Text([BTN_TRIPS]), cmd_trips))
     app.add_handler(MessageHandler(filters.Text([BTN_DELETE]), cmd_delete))
     app.add_handler(MessageHandler(filters.Text([BTN_HELP]), cmd_help))
+    # Edit trip callbacks
+    app.add_handler(CallbackQueryHandler(edit_callback, pattern=r"^edit:"))
+    app.add_handler(CallbackQueryHandler(edit_back_callback, pattern=r"^editback:"))
+    app.add_handler(CallbackQueryHandler(edit_type_callback, pattern=r"^edittype:"))
+    app.add_handler(CallbackQueryHandler(edit_type_set_callback, pattern=r"^edittypeset:"))
+    app.add_handler(CallbackQueryHandler(edit_cities_callback, pattern=r"^editcities:"))
+    app.add_handler(CallbackQueryHandler(edit_remove_city_callback, pattern=r"^editrmcity:"))
     app.add_handler(CallbackQueryHandler(delete_callback, pattern=r"^del:"))
+
+    app.add_error_handler(error_handler)
 
     logger.info("Trippa bot is running...")
     app.run_polling()
