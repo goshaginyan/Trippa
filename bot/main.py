@@ -29,7 +29,7 @@ from telegram.ext import (
     filters,
 )
 
-from config import BOT_TOKEN, DATA_DIR
+from config import BOT_TOKEN, DATA_DIR, ALLOWED_USER_IDS
 from datepicker import DatePicker
 import storage
 import voice
@@ -39,6 +39,11 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+
+def _is_allowed(user_id: int) -> bool:
+    return not ALLOWED_USER_IDS or user_id in ALLOWED_USER_IDS
+
 
 EMOJI = {
     "vacation": "\U0001f334",
@@ -176,6 +181,9 @@ _eato_picker = DatePicker(prefix="eato", show_year=True)
 # ── Command Handlers ─────────────────────────────────────────────────────
 
 async def cmd_start(update: Update, context) -> None:
+    if not _is_allowed(update.effective_user.id):
+        await update.message.reply_text("Доступ запрещён.")
+        return
     user = update.effective_user
     await update.message.reply_text(
         f"🌍 Привет, {_html(user.first_name)}!\n\n"
@@ -275,6 +283,9 @@ async def cmd_list(update: Update, context) -> None:
 # ── New Trip Conversation ────────────────────────────────────────────────
 
 async def new_start(update: Update, context) -> int:
+    if not _is_allowed(update.effective_user.id):
+        await update.message.reply_text("Доступ запрещён.")
+        return ConversationHandler.END
     context.user_data["new_trip"] = {"cities": []}
     await update.message.reply_text("➕ Создание поездки", reply_markup=cancel_keyboard())
     keyboard = [
@@ -1397,6 +1408,9 @@ PREMIUM_PAYLOAD = "premium_voice"
 
 async def handle_voice(update: Update, context) -> None:
     """Handle voice message: transcribe via Whisper, parse trip via GPT."""
+    if not _is_allowed(update.effective_user.id):
+        await update.message.reply_text("Доступ запрещён.")
+        return
     msg = update.message
     uid = msg.from_user.id
 

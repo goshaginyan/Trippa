@@ -22,3 +22,4 @@ if os.environ.get("RAILWAY_ENVIRONMENT") and os.path.isdir("/data"):
 DATA_DIR = os.environ.get("TRIPPA_DATA_DIR", _default_data_dir)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+ALLOWED_USER_IDS = {int(x) for x in os.environ.get("ALLOWED_USER_IDS", "").split(",") if x.strip()}
